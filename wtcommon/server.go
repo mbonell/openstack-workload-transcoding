@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// AccessControl returns a handler for the access control
 func AccessControl(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

@@ -1,26 +1,26 @@
 package database
 
 import (
-	"fmt"
 	"sync"
 	"strconv"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"fmt"
 )
 
 // Service is the interface that provides booking methods.
 type Service interface {
-	// Insert a new job
+	// Insert a new job into DB
 	InsertJob(job wttypes.Job) (string, error)
 
-	// Update a Job
+	// Update a Job in DB
 	UpdateJob(job wttypes.Job) error
 
-	// Get information about a particular job
+	// Get information from DB about a particular job
 	GetJob(jobID string) (wttypes.Job, error)
 
 	// List all jobs in DB
-	ListJobs() []wttypes.Job
+	ListJobs() ([]wttypes.Job, error)
 }
 
 type service struct {
@@ -35,6 +35,8 @@ func (s * service) InsertJob (job wttypes.Job) (string, error) {
 	defer s.mtx.Unlock()
 
 	job.ID = s.nextID
+
+	fmt.Println("inserting job:", job)
 
 	// Get next ID
 	i, _ := strconv.Atoi(s.nextID)
@@ -51,12 +53,16 @@ func (s * service) UpdateJob (job wttypes.Job) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
+	fmt.Println("updating job", job.ID)
+
 	_, ok := s.m[job.ID]
 	if !ok {
 		return wttypes.ErrNotFound
 	}
 
 	s.m[job.ID] = job
+
+	fmt.Println("job updated in memory:", job)
 
 	return nil
 }
@@ -66,18 +72,15 @@ func (s * service) GetJob(jobID string) (wttypes.Job, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	fmt.Println("id ", jobID)
-
 	job, ok := s.m[jobID]
 	if !ok {
-		fmt.Println("error in getJob!!  ", jobID)
 		return wttypes.Job{}, wttypes.ErrNotFound
 	}
 
 	return job, nil
 }
 
-func (s *service) ListJobs() []wttypes.Job {
+func (s *service) ListJobs() ([]wttypes.Job, error) {
 	// TODO change to MongoDB
 	values := []wttypes.Job{}
 
@@ -85,13 +88,13 @@ func (s *service) ListJobs() []wttypes.Job {
 		values = append(values, v)
 	}
 
-	return values
+	return values, nil
 }
 
 // NewService creates a database service with necessary dependencies.
 func NewService() Service {
 	return &service{
-		m: map[string]wttypes.Job{"1": wttypes.Job{ID:"1"}},
+		m: map[string]wttypes.Job{},
 		nextID: "1",
 	}
 }

@@ -12,8 +12,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 
-	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/database"
+	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 )
 
 func main() {
@@ -43,7 +43,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/jobs/", database.MakeHandler(ctx, ds, httpLogger))
+	mux.Handle("/v1/", database.MakeHandler(ctx, ds, httpLogger))
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 
@@ -60,4 +60,3 @@ func main() {
 
 	logger.Log("terminated", <-errs)
 }
-
