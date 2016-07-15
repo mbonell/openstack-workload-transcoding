@@ -37,7 +37,7 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 	// Ask DB to add job into DB
 	resp, err := resty.R().
 		SetBody(job).
-		Post(wtcommon.Servers["database"] + "/v1/jobs")
+		Post(wtcommon.Servers["database"] + "/jobs")
 
 	fmt.Println("[jobs]", "after REST in DB service")
 	fmt.Println("[jobs]", "resp:", resp)
@@ -68,7 +68,7 @@ func (s *service) GetJobStatus(jobID string) (string, error) {
 	fmt.Println("[jobs]", "calling REST in DB service")
 
 	// Ask DB to get job from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/v1/jobs/" + jobID)
+	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	fmt.Println("[jobs]", "after REST in DB service")
 	fmt.Println("[jobs]", "resp:", resp)
@@ -103,7 +103,7 @@ func (s *service) CancelJob(jobID string) error {
 	fmt.Println("[jobs]", "calling REST in DB service")
 
 	// Ask DB to get job from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/v1/jobs/" + jobID)
+	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	fmt.Println("[jobs]", "after REST in DB service")
 	fmt.Println("[jobs]", "resp:", resp)
@@ -134,7 +134,7 @@ func (s *service) CancelJob(jobID string) error {
 	// Update DB
 	resp, err = resty.R().
 		SetBody(job).
-		Put(wtcommon.Servers["database"] + "/v1/jobs/" + jobID)
+		Put(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {
@@ -162,7 +162,7 @@ func (s *service) UpdateTranscodingStatus(jobID string, ttID string, status stri
 	fmt.Println("[jobs]", "calling REST in DB service")
 
 	// Ask DB to get job from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/v1/jobs/" + jobID)
+	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	fmt.Println("[jobs]", "after REST in DB service")
 	fmt.Println("[jobs]", "resp:", resp)
@@ -214,7 +214,7 @@ func (s *service) UpdateTranscodingStatus(jobID string, ttID string, status stri
 	// Update DB
 	resp, err = resty.R().
 		SetBody(job).
-		Put(wtcommon.Servers["database"] + "/v1/jobs/" + jobID)
+		Put(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {

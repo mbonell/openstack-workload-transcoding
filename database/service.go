@@ -34,14 +34,10 @@ type service struct {
 
 func (s * service) InsertJob (job wttypes.Job) (string, error) {
 	// TODO change to MongoDB
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	job.ID = s.nextID
-
-	job.Status = wttypes.JOB_QUEUED
 
 	fmt.Println("inserting job:", job)
+
+	job.Status = wttypes.JOB_QUEUED
 
 	// Assign ids to transcoding targets
 	ttID := 1
@@ -53,10 +49,18 @@ func (s * service) InsertJob (job wttypes.Job) (string, error) {
 		job.TranscodingTargets[k] = v
 	}
 
+	// MUTEX area - BEGIN
+	s.mtx.Lock()
+
+	job.ID = s.nextID
+
 	// Get next ID
 	i, _ := strconv.Atoi(s.nextID)
 	i = i + 1
 	s.nextID = strconv.Itoa(i)
+
+	s.mtx.Unlock()
+	// MUTEX area - END
 
 	s.m[job.ID] = job
 
@@ -65,8 +69,6 @@ func (s * service) InsertJob (job wttypes.Job) (string, error) {
 
 func (s * service) UpdateJob (job wttypes.Job) error {
 	// TODO change to MongoDB
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
 
 	fmt.Println("updating job", job.ID)
 
@@ -84,8 +86,6 @@ func (s * service) UpdateJob (job wttypes.Job) error {
 
 func (s * service) GetJob(jobID string) (wttypes.Job, error) {
 	// TODO change to MongoDB
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
 
 	job, ok := s.m[jobID]
 	if !ok {
@@ -97,6 +97,7 @@ func (s * service) GetJob(jobID string) (wttypes.Job, error) {
 
 func (s *service) ListJobs() ([]wttypes.Job, error) {
 	// TODO change to MongoDB
+
 	values := []wttypes.Job{}
 
 	for _, v := range s.m {

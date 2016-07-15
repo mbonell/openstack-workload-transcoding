@@ -1,8 +1,9 @@
 package jobs
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
+	"encoding/json"
 
 	"golang.org/x/net/context"
 
@@ -12,7 +13,6 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"fmt"
 )
 
 // MakeHandler returns a handler for the database service.
@@ -22,7 +22,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"url_media":"http://obazavil-nuc/big_buck_bunny_720p_1mb.mp4", "video_name":"conejo", "transcoding_targets":[{"name":"transcode-1","profile":"iphone6","objectname":""},{"name":"transcode-2","profile":"ipadmini","object_name":""}]}' -X POST https://localhost:8081/v1/jobs
+	// test: curl -k -H "Content-Type: application/json" -d '{"url_media":"http://obazavil-nuc/big_buck_bunny_720p_1mb.mp4", "video_name":"conejo", "transcoding_targets":[{"name":"transcode-1","profile":"iphone6","objectname":""},{"name":"transcode-2","profile":"ipadmini","object_name":""}]}' -X POST https://localhost:8081/jobs
 	addNewJobHandler := kithttp.NewServer(
 		ctx,
 		makeAddNewJobEndpoint(js),
@@ -31,7 +31,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		opts...,
 	)
 
-	// test: curl -k https://localhost:8081/v1/jobs/1/status
+	// test: curl -k https://localhost:8081/jobs/1
 	getJobStatusHandler := kithttp.NewServer(
 		ctx,
 		makeGetJobStatusEndpoint(js),
@@ -40,7 +40,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		opts...,
 	)
 
-	// test: curl -k https://localhost:8081/v1/jobs/1/cancel
+	// test: curl -k -X DELETE https://localhost:8081/jobs/1
 	cancelJobHandler := kithttp.NewServer(
 		ctx,
 		makeCancelJobEndpoint(js),
@@ -49,7 +49,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		opts...,
 	)
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running", "objectname":"myobjectname"}' -X PUT https://localhost:8081/v1/jobs/1/transcoding/1/status
+	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running", "object_name":"myobjectname"}' -X PUT https://localhost:8081/jobs/1/transcoding/1/status
 	updateTranscodingStatusHandler := kithttp.NewServer(
 		ctx,
 		makeUpdateTranscodingStatusEndpoint(js),
@@ -60,10 +60,10 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 
 	r := mux.NewRouter()
 
-	r.Handle("/v1/jobs", addNewJobHandler).Methods("POST")
-	r.Handle("/v1/jobs/{id}/status", getJobStatusHandler).Methods("GET")
-	r.Handle("/v1/jobs/{id}/cancel", cancelJobHandler).Methods("GET")
-	r.Handle("/v1/jobs/{id}/transcoding/{ttid}/status", updateTranscodingStatusHandler).Methods("PUT")
+	r.Handle("/jobs", addNewJobHandler).Methods("POST")
+	r.Handle("/jobs/{id}", getJobStatusHandler).Methods("GET")
+	r.Handle("/jobs/{id}", cancelJobHandler).Methods("DELETE")
+	r.Handle("/jobs/{id}/transcoding/{ttid}/status", updateTranscodingStatusHandler).Methods("PUT")
 
 	return r
 
@@ -103,7 +103,10 @@ func decodeCancelJobRequest(_ context.Context, r *http.Request) (interface{}, er
 }
 
 func decodeUpdateTranscodingStatusRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var v updateTranscodingStatusRequest
+	var body struct {
+		Status string `json:"status"`
+		ObjectName string `json:"object_name"`
+	}
 
 	vars := mux.Vars(r)
 
@@ -117,18 +120,17 @@ func decodeUpdateTranscodingStatusRequest(_ context.Context, r *http.Request) (i
 		return nil, wttypes.ErrBadRoute
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return nil, err
 	}
 
 	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
 	//TODO: validate malformed struct
 
-	fmt.Println("decodeUpdateTranscodingStatusRequest:", v)
+	fmt.Println("decodeUpdateTranscodingStatusRequest:", body)
 
-	v.jobID = jobID
-	v.ttID = ttID
-	return v, nil
+
+	return updateTranscodingStatusRequest{jobID:jobID, ttID: ttID, status: body.Status, objectname: body.ObjectName}, nil
 }
 
 type errorer interface {

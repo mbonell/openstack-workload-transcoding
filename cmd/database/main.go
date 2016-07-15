@@ -43,7 +43,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/v1/", database.MakeHandler(ctx, ds, httpLogger))
+	mux.Handle("/", database.MakeHandler(ctx, ds, httpLogger))
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 
