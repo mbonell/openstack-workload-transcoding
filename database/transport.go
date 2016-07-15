@@ -12,7 +12,6 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"fmt"
 )
 
 // MakeHandler returns a handler for the database service.

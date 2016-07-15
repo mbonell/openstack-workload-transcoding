@@ -4,8 +4,14 @@ import (
 	"net/http"
 )
 
+var Servers = map[string]string{
+	"database": "https://localhost:8080",
+	"jobs":     "https://localhost:8081",
+}
+
 // AccessControl returns a handler for the access control
 func AccessControl(h http.Handler) http.Handler {
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")

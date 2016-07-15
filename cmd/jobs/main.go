@@ -12,13 +12,13 @@ import (
 
 	"github.com/go-kit/kit/log"
 
-	"github.com/obazavil/openstack-workload-transcoding/database"
+	"github.com/obazavil/openstack-workload-transcoding/jobs"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 )
 
 func main() {
 	var (
-		httpAddr = flag.String("http.addr", ":8080", "Address for HTTP (JSON) database server")
+		httpAddr = flag.String("http.addr", ":8081", "Address for HTTP (JSON) jobs server")
 	)
 	flag.Parse()
 
@@ -34,16 +34,16 @@ func main() {
 		ctx = context.Background()
 	}
 
-	var ds database.Service
+	var js jobs.Service
 	{
-		ds = database.NewService()
+		js = jobs.NewService()
 	}
 
 	httpLogger := log.NewContext(logger).With("component", "http")
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/v1/", database.MakeHandler(ctx, ds, httpLogger))
+	mux.Handle("/v1/", jobs.MakeHandler(ctx, js, httpLogger))
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 

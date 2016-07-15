@@ -1,11 +1,14 @@
 package database
 
 import (
+	"fmt"
 	"sync"
 	"strconv"
+	"crypto/tls"
+
+	"github.com/go-resty/resty"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"fmt"
 )
 
 // Service is the interface that provides booking methods.
@@ -36,7 +39,19 @@ func (s * service) InsertJob (job wttypes.Job) (string, error) {
 
 	job.ID = s.nextID
 
+	job.Status = wttypes.JOB_QUEUED
+
 	fmt.Println("inserting job:", job)
+
+	// Assign ids to transcoding targets
+	ttID := 1
+	for k, v := range job.TranscodingTargets {
+		v.ID = strconv.Itoa(ttID)
+		ttID = ttID + 1
+
+		v.Status = wttypes.TRANSCODING_QUEUED
+		job.TranscodingTargets[k] = v
+	}
 
 	// Get next ID
 	i, _ := strconv.Atoi(s.nextID)
@@ -93,6 +108,8 @@ func (s *service) ListJobs() ([]wttypes.Job, error) {
 
 // NewService creates a database service with necessary dependencies.
 func NewService() Service {
+	resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+
 	return &service{
 		m: map[string]wttypes.Job{},
 		nextID: "1",

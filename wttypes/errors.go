@@ -14,5 +14,9 @@ var (
 
 	ErrMismatchID = errors.New("Mistmach in URL ID and JSON ID")
 
+	ErrNoJSON = errors.New("Response not in JSON format")
+
+	ErrTranscodingNotFound = errors.New("Transcoding ID not found")
+
 
 )
