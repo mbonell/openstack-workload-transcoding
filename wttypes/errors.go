@@ -18,5 +18,5 @@ var (
 
 	ErrTranscodingNotFound = errors.New("Transcoding ID not found")
 
-
+	ErrCantUploadObject = errors.New("Couldn't upload object into Object Storage")
 )

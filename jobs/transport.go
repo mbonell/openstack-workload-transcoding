@@ -1,9 +1,9 @@
 package jobs
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"encoding/json"
 
 	"golang.org/x/net/context"
 
@@ -49,7 +49,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		opts...,
 	)
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running", "object_name":"myobjectname"}' -X PUT https://localhost:8081/jobs/1/transcoding/1/status
+	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running", "object_name":"modified"}' -X PUT https://localhost:8081/jobs/1/transcoding/1/status
 	updateTranscodingStatusHandler := kithttp.NewServer(
 		ctx,
 		makeUpdateTranscodingStatusEndpoint(js),
@@ -79,7 +79,7 @@ func decodeAddNewJobRequest(_ context.Context, r *http.Request) (interface{}, er
 	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
 	//TODO: validate ID is empty
 
-	return addNewJobRequest{Job:job}, nil
+	return addNewJobRequest{Job: job}, nil
 }
 
 func decodeGetJobStatusRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -104,18 +104,13 @@ func decodeCancelJobRequest(_ context.Context, r *http.Request) (interface{}, er
 
 func decodeUpdateTranscodingStatusRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var body struct {
-		Status string `json:"status"`
+		Status     string `json:"status"`
 		ObjectName string `json:"object_name"`
 	}
 
 	vars := mux.Vars(r)
 
-	jobID, ok := vars["id"]
-	if !ok {
-		return nil, wttypes.ErrBadRoute
-	}
-
-	ttID, ok := vars["ttid"]
+	id, ok := vars["id"]
 	if !ok {
 		return nil, wttypes.ErrBadRoute
 	}
@@ -129,8 +124,7 @@ func decodeUpdateTranscodingStatusRequest(_ context.Context, r *http.Request) (i
 
 	fmt.Println("decodeUpdateTranscodingStatusRequest:", body)
 
-
-	return updateTranscodingStatusRequest{jobID:jobID, ttID: ttID, status: body.Status, objectname: body.ObjectName}, nil
+	return updateTranscodingStatusRequest{ID: id, Status: body.Status, ObjectName: body.ObjectName}, nil
 }
 
 type errorer interface {
@@ -163,4 +157,3 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		"error": err.Error(),
 	})
 }
-

@@ -1,3 +1,5 @@
+// Useful for JSON->Go: https://mholt.github.io/json-to-go/
+
 package wtcommon
 
 import (
@@ -43,9 +45,23 @@ func JSON2Job(s string) (wttypes.Job, error) {
 	var v JSONJob
 
 	if err := json.NewDecoder(strings.NewReader(s)).Decode(&v); err != nil {
-		return v.Job, errors.New("Can't decode JSON: " + s)
+		return wttypes.Job{}, errors.New("Can't decode JSON: " + s)
 	}
 
 	return v.Job, nil
+}
+
+type JSONTranscoding struct {
+	Transcoding wttypes.TranscodingProfile `json:"transcoding"`
+}
+
+func JSON2Transcoding(s string) (wttypes.TranscodingProfile, error) {
+	var v JSONTranscoding
+
+	if err := json.NewDecoder(strings.NewReader(s)).Decode(&v); err != nil {
+		return wttypes.TranscodingProfile{}, errors.New("Can't decode JSON: " + s)
+	}
+
+	return v.Transcoding, nil
 }
 

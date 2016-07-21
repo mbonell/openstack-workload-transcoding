@@ -17,6 +17,10 @@ import (
 )
 
 func main() {
+	var err error
+
+	errs := make(chan error, 2)
+
 	var (
 		httpAddr = flag.String("http.addr", ":8081", "Address for HTTP (JSON) jobs server")
 	)
@@ -36,7 +40,10 @@ func main() {
 
 	var js jobs.Service
 	{
-		js = jobs.NewService()
+		js, err = jobs.NewService()
+		if err != nil {
+			errs <- err
+		}
 	}
 
 	httpLogger := log.NewContext(logger).With("component", "http")
@@ -47,7 +54,6 @@ func main() {
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 
-	errs := make(chan error, 2)
 	go func() {
 		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
 		errs <- http.ListenAndServeTLS(*httpAddr, "../../certs/server.pem", "../../certs/server.key", nil)

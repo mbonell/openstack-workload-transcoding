@@ -1,14 +1,16 @@
 package jobs
 
 import (
+	"crypto/tls"
 	"fmt"
 	"strings"
-	"crypto/tls"
 
 	"github.com/go-resty/resty"
 
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"errors"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"github.com/rackspace/gophercloud"
 )
 
 // Service is the interface that provides jobs methods.
@@ -23,18 +25,29 @@ type Service interface {
 	CancelJob(jobID string) error
 
 	// Update the status of a transcoding
-	UpdateTranscodingStatus(jobID string, ttID string, status string, objectname string) error
+	UpdateTranscodingStatus(id string, status string, objectname string) error
 }
 
 type service struct {
+	Provider             *gophercloud.ProviderClient
+	ServiceObjectStorage *gophercloud.ServiceClient
 }
 
 func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 	fmt.Println("[jobs]", "AddNewJob")
 
+	//First let's upload to Object Storage
+	objectname, errOS := wtcommon.Upload2ObjectStorage(s.ServiceObjectStorage, job.URLMedia, job.VideoName)
+	if errOS == nil {
+		job.ObjectName = objectname
+		job.Status = wttypes.JOB_QUEUED
+	} else {
+		job.Status = wttypes.JOB_ERROR
+	}
+
 	fmt.Println("[jobs]", "calling REST in DB service")
 
-	// Ask DB to add job into DB
+	// Ask DB to add job into DB (even with error, for logging purposes)
 	resp, err := resty.R().
 		SetBody(job).
 		Post(wtcommon.Servers["database"] + "/jobs")
@@ -52,14 +65,21 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 	// There was an error in the response?
 	if strings.HasPrefix(str, `{"error"`) {
 		return "", wtcommon.JSON2Err(str)
-
 	}
 
 	// Get ID
 	id, err := wtcommon.JSON2JobID(str)
 	fmt.Println("[jobs]", "id:", id)
+	if err != nil {
+		return id, err
+	}
 
-	return id, err
+	// If job is in ERROR status, let's notify error even if everything else was OK
+	if job.Status == wttypes.JOB_ERROR {
+		return id, errors.New(wttypes.ErrCantUploadObject.Error() + ": " + errOS.Error())
+	}
+
+	return id, nil
 }
 
 func (s *service) GetJobStatus(jobID string) (string, error) {
@@ -154,15 +174,14 @@ func (s *service) CancelJob(jobID string) error {
 	return nil
 }
 
-func (s *service) UpdateTranscodingStatus(jobID string, ttID string, status string, objectname string) error {
+func (s *service) UpdateTranscodingStatus(id string, status string, objectname string) error {
 	fmt.Println("[jobs]", "UpdateTranscodingStatus")
-	fmt.Println("[jobs]", jobID, ttID, status, objectname)
-
+	fmt.Println("[jobs]", id, status, objectname)
 
 	fmt.Println("[jobs]", "calling REST in DB service")
 
-	// Ask DB to get job from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
+	// Ask DB to get transcoding from DB
+	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/transcodings/" + id)
 
 	fmt.Println("[jobs]", "after REST in DB service")
 	fmt.Println("[jobs]", "resp:", resp)
@@ -180,41 +199,24 @@ func (s *service) UpdateTranscodingStatus(jobID string, ttID string, status stri
 
 	}
 
-	// Get job
-	job, err := wtcommon.JSON2Job(str)
+	// Get transcoding
+	t, err := wtcommon.JSON2Transcoding(str)
 	if err != nil {
 		return err
 	}
 
-	// Look for the Target Transcoding ID
-	//TODO: another table? for now is same object
-
-	found := false
-	for k, v := range job.TranscodingTargets {
-		if v.ID == ttID {
-			v.Status = status
-
-			// Update objectname only when specified
-			if objectname != "" {
-				v.ObjectName = objectname
-			}
-
-			job.TranscodingTargets[k] = v
-			found = true
-			break
-		}
+	//Update fields
+	t.Status = status
+	if status == wttypes.TRANSCODING_FINISHED && objectname != "" {
+		t.ObjectName = objectname
 	}
 
-	if !found {
-		return wttypes.ErrTranscodingNotFound
-	}
-
-	fmt.Println("job to be sent ttStatus: ", job)
+	fmt.Println("transcoding to be sent: ", t)
 
 	// Update DB
 	resp, err = resty.R().
-		SetBody(job).
-		Put(wtcommon.Servers["database"] + "/jobs/" + jobID)
+		SetBody(t).
+		Put(wtcommon.Servers["database"] + "/transcodings/" + id)
 
 	// Error in communication
 	if err != nil {
@@ -234,10 +236,22 @@ func (s *service) UpdateTranscodingStatus(jobID string, ttID string, status stri
 	return nil
 }
 
-
 // NewService creates a jobs service with necessary dependencies.
-func NewService() Service {
+func NewService() (Service, error) {
 	resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 
-	return &service{}
+	provider, err := wtcommon.GetProvider()
+	if err != nil {
+		return &service{}, err
+	}
+
+	serviceObjectStorage, err := wtcommon.GetServiceObjectStorage(provider)
+	if err != nil {
+		return &service{}, err
+	}
+
+	return &service{
+		Provider:             provider,
+		ServiceObjectStorage: serviceObjectStorage,
+	}, nil
 }
