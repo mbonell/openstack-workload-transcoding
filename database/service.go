@@ -1,14 +1,15 @@
 package database
 
 import (
-	"crypto/tls"
 	"fmt"
+	"errors"
+	"crypto/tls"
 
 	"github.com/go-resty/resty"
 
-	"errors"
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 	"gopkg.in/mgo.v2"
+
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 // Service is the interface that provides booking methods.

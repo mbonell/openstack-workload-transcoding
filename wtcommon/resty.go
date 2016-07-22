@@ -65,3 +65,17 @@ func JSON2Transcoding(s string) (wttypes.TranscodingProfile, error) {
 	return v.Transcoding, nil
 }
 
+type JSONTask struct {
+	Task wttypes.TranscodingTask `json:"task"`
+}
+
+func JSON2Task(s string) (wttypes.TranscodingTask, error) {
+	var v JSONTask
+
+	if err := json.NewDecoder(strings.NewReader(s)).Decode(&v); err != nil {
+		return wttypes.TranscodingTask{}, errors.New("Can't decode JSON: " + s)
+	}
+
+	return v.Task, nil
+}
+

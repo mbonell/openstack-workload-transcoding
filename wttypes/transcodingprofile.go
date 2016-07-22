@@ -17,3 +17,9 @@ type TranscodingProfile struct {
 	ObjectName string `json:"object_name"`
 	Status     string `json:"status"`
 }
+
+type TranscodingTask struct {
+	ID         string `json:"id"`
+	ObjectName string `json:"object_name"`
+	Profile    string `json:"profile"`
+}

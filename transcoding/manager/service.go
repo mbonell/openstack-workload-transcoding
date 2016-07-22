@@ -2,12 +2,13 @@ package manager
 
 import (
 	"fmt"
+	"errors"
 	"crypto/tls"
 
 	"github.com/go-resty/resty"
 
 	"gopkg.in/mgo.v2"
-	"errors"
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 // Service is the interface that provides transcoding manager methods.
@@ -25,7 +26,7 @@ type Service interface {
 	GetTotalTasksRunning() (int, error)
 
 	// Get next Transcoding task
-	GetNextTask(workerAddr string) (TranscodingTask, error)
+	GetNextTask(workerAddr string) (wttypes.TranscodingTask, error)
 }
 
 type service struct {
@@ -34,7 +35,7 @@ type service struct {
 
 func (s *service) AddTranscoding(id string, objectname string, profile string) error {
 	fmt.Println("[manager]", "AddNewTranscoding start...")
-	task := TranscodingTask{
+	task := wttypes.TranscodingTask{
 		ID: id,
 		ObjectName: objectname,
 		Profile: profile,
@@ -71,7 +72,7 @@ func (s *service) GetTotalTasksRunning() (int, error) {
 	return total, err
 }
 
-func (s * service) GetNextTask(workerAddr string) (TranscodingTask, error) {
+func (s * service) GetNextTask(workerAddr string) (wttypes.TranscodingTask, error) {
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 

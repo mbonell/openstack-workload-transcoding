@@ -1,8 +1,8 @@
 package database
 
 import (
-	"encoding/json"
 	"net/http"
+	"encoding/json"
 
 	"golang.org/x/net/context"
 

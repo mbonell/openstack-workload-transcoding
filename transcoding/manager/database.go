@@ -3,9 +3,10 @@ package manager
 import (
 	"time"
 
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 const (
@@ -80,7 +81,7 @@ func CreateMongoSession() (*mgo.Session, error) {
 	return session, nil
 }
 
-func (ds *DataStore) AddTask(task TranscodingTask) (string, error) {
+func (ds *DataStore) AddTask(task wttypes.TranscodingTask) (string, error) {
 	id := bson.NewObjectId()
 
 	t := TaskDB{
@@ -137,7 +138,7 @@ func (ds *DataStore) GetTotalTasksRunning() (int, error) {
 	return len(results), nil
 }
 
-func (ds *DataStore) GetNextQueuedTask(workerAddr string) (TranscodingTask, error) {
+func (ds *DataStore) GetNextQueuedTask(workerAddr string) (wttypes.TranscodingTask, error) {
 	// Get "tasks" collection
 	c := ds.session.DB(MongoDB).C(MongoTasksCollection)
 
@@ -145,7 +146,7 @@ func (ds *DataStore) GetNextQueuedTask(workerAddr string) (TranscodingTask, erro
 	result := TaskDB{}
 	err := c.Find(bson.M{"status": wttypes.TRANSCODING_QUEUED}).Sort("added").One(&result)
 	if err != nil {
-		return TranscodingTask{}, err
+		return wttypes.TranscodingTask{}, err
 	}
 
 	// TODO: change to TRANSCODING_REQUESTED and add an extra ACK step
@@ -157,10 +158,10 @@ func (ds *DataStore) GetNextQueuedTask(workerAddr string) (TranscodingTask, erro
 
 	_, err = c.UpsertId(result.ID, result)
 	if err != nil {
-		return TranscodingTask{}, err
+		return wttypes.TranscodingTask{}, err
 	}
 
-	return TranscodingTask{
+	return wttypes.TranscodingTask{
 		ID:         result.ID.Hex(),
 		ObjectName: result.ObjectName,
 		Profile:    result.Profile,

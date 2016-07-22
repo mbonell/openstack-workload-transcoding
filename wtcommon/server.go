@@ -7,6 +7,8 @@ import (
 var Servers = map[string]string{
 	"database": "https://localhost:8080",
 	"jobs":     "https://localhost:8081",
+	"manager":  "https://localhost:8082",
+	"worker":   "https://localhost:8083",
 }
 
 // AccessControl returns a handler for the access control

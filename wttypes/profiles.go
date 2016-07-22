@@ -15,7 +15,7 @@ type Profile struct {
 }
 
 // NewProfile returns a map with the supported profiles for transcoding
-func NewProfile() *map[string]Profile {
+func NewProfile() map[string]Profile {
 	// Profiles FFMPEG
 	proBaseline := ProfileFFMPEG{Name: "baseline", Args: "-movflags faststart -profile:v baseline -level 3.0"}
 	proApple42 := ProfileFFMPEG{Name: "apple-42", Args: "-profile:v high -level 4.2"}
@@ -31,5 +31,5 @@ func NewProfile() *map[string]Profile {
 	p["iPhonePlus6s"] = Profile{Name: "iPhonePlus6s", FFMPEG: proApple42, Resolution: "1920x1080"}
 	p["iPadMini4"] = Profile{Name: "iPadMini4", FFMPEG: proApple42, Resolution: "2048x1536"}
 
-	return &p
+	return p
 }

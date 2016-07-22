@@ -1,6 +1,8 @@
 package wttypes
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrInvalidArgument is used for "invalid argument"
@@ -19,4 +21,8 @@ var (
 	ErrTranscodingNotFound = errors.New("Transcoding ID not found")
 
 	ErrCantUploadObject = errors.New("Couldn't upload object into Object Storage")
+
+	ErrNoTaskRunning = errors.New("No task is currently running")
+
+	ErrNoProcessRunning = errors.New("No FFMPEG process is currently running")
 )

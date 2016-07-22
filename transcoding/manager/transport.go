@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"fmt"
 	"net/http"
 	"encoding/json"
 
@@ -12,7 +13,6 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"fmt"
 )
 
 // MakeHandler returns a handler for the transcoding manager service.
@@ -22,8 +22,8 @@ func MakeHandler(ctx context.Context, tms Service, logger kitlog.Logger) http.Ha
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"id":"1", "job_id":"1", "object_name":"myobjectname2", "profile":"iPhone5s"}' -X POST https://localhost:8082/transcodings
-	addNewTranscodingHandler := kithttp.NewServer(
+	// test: curl -k -H "Content-Type: application/json" -d '{"id":"1", "object_name":"rabbitobject", "profile":"iPhone5s"}' -X POST https://localhost:8082/transcodings
+	addTranscodingHandler := kithttp.NewServer(
 		ctx,
 		makeAddTranscodingEndpoint(tms),
 		decodeAddTranscodingRequest,
@@ -60,7 +60,7 @@ func MakeHandler(ctx context.Context, tms Service, logger kitlog.Logger) http.Ha
 
 	r := mux.NewRouter()
 
-	r.Handle("/transcodings", addNewTranscodingHandler).Methods("POST")
+	r.Handle("/transcodings", addTranscodingHandler).Methods("POST")
 	r.Handle("/tasks", getNextTaskHandler).Methods("GET")
 	r.Handle("/transcodings/queued", getTotalTasksQueuedHandler).Methods("GET")
 	r.Handle("/transcodings/running", getTotalTasksRunningHandler).Methods("GET")
@@ -70,7 +70,7 @@ func MakeHandler(ctx context.Context, tms Service, logger kitlog.Logger) http.Ha
 }
 
 func decodeAddTranscodingRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var t TranscodingTask
+	var t wttypes.TranscodingTask
 
 	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 		return nil, err

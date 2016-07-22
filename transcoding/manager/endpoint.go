@@ -4,6 +4,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 // AddTranscoding
@@ -20,10 +21,10 @@ type addTranscodingResponse struct {
 
 func (r addTranscodingResponse) error() error { return r.Err }
 
-func makeAddTranscodingEndpoint(ts Service) endpoint.Endpoint {
+func makeAddTranscodingEndpoint(tms Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(addTranscodingRequest)
-		err := ts.AddTranscoding(req.ID, req.ObjectName, req.Profile)
+		err := tms.AddTranscoding(req.ID, req.ObjectName, req.Profile)
 		return addTranscodingResponse{Err: err}, nil
 	}
 }
@@ -73,7 +74,7 @@ type getNextTaskRequest struct {
 }
 
 type getNextTaskResponse struct {
-	Task TranscodingTask `json:"task,omitempty"`
+	Task wttypes.TranscodingTask `json:"task,omitempty"`
 	Err  error           `json:"error,omitempty"`
 }
 

@@ -1,13 +1,14 @@
 package database
 
 import (
-	"time"
-
-	"errors"
 	"fmt"
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"time"
+	"errors"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 const (

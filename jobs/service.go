@@ -1,16 +1,17 @@
 package jobs
 
 import (
-	"crypto/tls"
 	"fmt"
+	"errors"
 	"strings"
+	"crypto/tls"
 
 	"github.com/go-resty/resty"
 
-	"errors"
-	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 	"github.com/rackspace/gophercloud"
+
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 )
 
 // Service is the interface that provides jobs methods.
@@ -29,15 +30,15 @@ type Service interface {
 }
 
 type service struct {
-	Provider             *gophercloud.ProviderClient
-	ServiceObjectStorage *gophercloud.ServiceClient
+	provider             *gophercloud.ProviderClient
+	serviceObjectStorage *gophercloud.ServiceClient
 }
 
 func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 	fmt.Println("[jobs]", "AddNewJob")
 
 	//First let's upload to Object Storage
-	objectname, errOS := wtcommon.Upload2ObjectStorage(s.ServiceObjectStorage, job.URLMedia, job.VideoName)
+	objectname, errOS := wtcommon.Upload2ObjectStorage(s.serviceObjectStorage, job.URLMedia, job.VideoName)
 	if errOS == nil {
 		job.ObjectName = objectname
 		job.Status = wttypes.JOB_QUEUED
@@ -251,7 +252,7 @@ func NewService() (Service, error) {
 	}
 
 	return &service{
-		Provider:             provider,
-		ServiceObjectStorage: serviceObjectStorage,
+		provider:             provider,
+		serviceObjectStorage: serviceObjectStorage,
 	}, nil
 }
