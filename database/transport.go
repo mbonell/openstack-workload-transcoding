@@ -147,7 +147,7 @@ func decodeGetTranscodingRequest(_ context.Context, r *http.Request) (interface{
 }
 
 func decodeUpdateTranscodingRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var t wttypes.TranscodingProfile
+	var t wttypes.TranscodingTask
 
 	vars := mux.Vars(r)
 	id, ok := vars["id"]

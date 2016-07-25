@@ -18,10 +18,10 @@ import (
 	"github.com/obazavil/openstack-workload-transcoding/transcoding/worker"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"net"
+	"os/exec"
 	"path"
 	"strings"
-	"os/exec"
-	"net"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 )
 
 // Get outbound ip of this machine
-func GetIP() (string, error) {
+func getIP() (string, error) {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "", err
@@ -42,6 +42,54 @@ func GetIP() (string, error) {
 	return addr[0:idx], nil
 }
 
+func notifyTaskStatus(id string, status string, objectname string) {
+
+	// Update Manager Service
+	bodyM := struct {
+		Status string `json:"status"`
+	}{
+		Status: status,
+	}
+
+	resp, err := resty.R().
+		SetBody(bodyM).
+		Put(fmt.Sprintf("%s/tasks/%s/status",
+		wtcommon.Servers["jobs"],
+		id))
+
+	if err != nil {
+		//TODO: do something when status update fails
+	}
+
+	str := resp.String()
+	if strings.HasPrefix(str, `{"error"`) {
+		//TODO: do something when status update fails
+	}
+
+	// Update Jobs Service
+	bodyJ := struct {
+		Status     string `json:"status"`
+		ObjectName string `json:"object_name,omitempty"`
+	}{
+		Status:     status,
+		ObjectName: objectname,
+	}
+
+	resp, err = resty.R().
+		SetBody(bodyJ).
+		Put(fmt.Sprintf("%s/transcodings/%s/status",
+			wtcommon.Servers["jobs"],
+			id))
+
+	if err != nil {
+		//TODO: do something when status update fails
+	}
+
+	str = resp.String()
+	if strings.HasPrefix(str, `{"error"`) {
+		//TODO: do something when status update fails
+	}
+}
 func main() {
 	var err error
 
@@ -66,15 +114,12 @@ func main() {
 
 	var tws worker.Service
 	{
-		tws, err = worker.NewService()
-		if err != nil {
-			errs <- err
-		}
+		tws = worker.NewService()
 	}
 
 	var ip string
 	{
-		ip, err = GetIP()
+		ip, err = getIP()
 		if err != nil {
 			errs <- err
 		}
@@ -101,40 +146,48 @@ func main() {
 	// Transcoding go func
 	//forever := make(chan bool)
 	go func() {
+		// OpenStack
+		provider, err := wtcommon.GetProvider()
+		if err != nil {
+			errs <- err
+		}
+
+		serviceObjectStorage, err := wtcommon.GetServiceObjectStorage(provider)
+		if err != nil {
+			errs <- err
+		}
+
 		for {
-			// Wait
-			time.Sleep(DELAY)
-
 			// Ask manager for work
-			resp, err := resty.R().Get(wtcommon.Servers["manager"] + "/tasks?worker=" + ip)
+			resp, err := resty.R().
+				Get(wtcommon.Servers["manager"] + "/tasks?worker=" + ip)
 
-			fmt.Println("called REST")
 
 			// Error in communication? sleep and retry
 			if err != nil {
+				time.Sleep(DELAY)
 				continue
 			}
 
+			// Get response
 			str := resp.String()
-
-			fmt.Println("response:", str)
-			logger.Log("resp", str)
 
 			// There was an error? sleep and retry
 			if strings.HasPrefix(str, `{"error"`) {
+				time.Sleep(DELAY)
 				continue
 			}
 
+			// Decode into task type
 			task, err := wtcommon.JSON2Task(str)
 			if err != nil {
-				logger.Log("JSONErr", err.Error())
-
+				time.Sleep(DELAY)
 				continue
 			}
 
 			// Everything fine so far, let's update our status
-			fmt.Println("transcoding started: ", str)
 			tws.WorkerUpdateStatus(worker.WORKER_STATUS_BUSY)
+			notifyTaskStatus(task.ID, wttypes.TRANSCODING_RUNNING, "")
 
 			// Filenames of our media
 			fnOriginal := path.Join(os.TempDir(),
@@ -147,18 +200,14 @@ func main() {
 					task.Profile,
 				))
 
-			//// Download media from object storage
-			//err = wtcommon.DownloadFromObjectStorage(task.ObjectName, fnOriginal)
-			//if err != nil {
-			//	fmt.Println("[err] Couldn't download object '%s': %s\n",
-			//		task.ObjectName,
-			//		err)
-			//	//TODO: update status in manager
-			//	tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
-			//	continue
-			//}
-			fnOriginal = "/Users/obazavil/Downloads/videos/id4.mp4"
-			fmt.Println("transcoded:", fnTranscoded)
+			// Download media from object storage
+			err = wtcommon.DownloadFromObjectStorage(serviceObjectStorage, task.ObjectName, fnOriginal)
+			if err != nil {
+				tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
+				notifyTaskStatus(task.ID, wttypes.TRANSCODING_ERROR, "")
+				time.Sleep(DELAY)
+				continue
+			}
 
 			// Get profile information
 			p, ok := wttypes.NewProfile()[task.Profile]
@@ -166,13 +215,14 @@ func main() {
 				fmt.Printf("[err] Profile %s doesn't exist.\n",
 					task.Profile)
 
-				//TODO: update status in manager
 				tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
+				notifyTaskStatus(task.ID, wttypes.TRANSCODING_ERROR, "")
+				time.Sleep(DELAY)
 				continue
 			}
 
 			// Execute ffmpeg
-			args := []string {"-i", fnOriginal}
+			args := []string{"-i", fnOriginal}
 
 			args = append(args, strings.Split(p.FFMPEG.Args, " ")...)
 
@@ -185,9 +235,7 @@ func main() {
 
 			cmd := exec.Command("ffmpeg", args...)
 
-			fmt.Println("args:", cmd.Args)
-
-			// Remove target file just in case
+			// Remove target file just in case before we start
 			os.Remove(fnTranscoded)
 
 			err = cmd.Start()
@@ -195,33 +243,53 @@ func main() {
 				fmt.Printf("[err] ffmpeg: %s.\n",
 					err)
 
-				//TODO: update status in manager
 				tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
+				notifyTaskStatus(task.ID, wttypes.TRANSCODING_ERROR, "")
+				time.Sleep(DELAY)
 				continue
 			}
+
+			// Update process in the service (por cancellation purposes)
 			tws.WorkerUpdateProcess(cmd.Process)
 
-			err = cmd.Wait()
-			if err != nil {
-				if exiterr, ok := err.(*exec.ExitError); ok {
+			// Wait for ffmpeg to finish
+			exitCode := 0
+			errWait := cmd.Wait()
+			if errWait != nil {
+				if exiterr, ok := errWait.(*exec.ExitError); ok {
 					if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-						fmt.Printf("Exit Status: %d", status.ExitStatus())
+						exitCode = status.ExitStatus()
 					}
-				} else {
-					fmt.Printf("cmd.Wait: %v", err)
 				}
-
-				//TODO: update status in manager
-				tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
-				continue
 			}
 
-			//TODO: update status in manager
-			tws.WorkerUpdateProcess(nil)
-			tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
-			fmt.Println("transcoding finished")
-		}
+			var status string
+			switch {
+			case errWait == nil:
+				status = wttypes.TRANSCODING_FINISHED
+			case exitCode == 255:
+				status = wttypes.TRANSCODING_CANCELLED
+			default:
+				status = wttypes.TRANSCODING_ERROR
+			}
 
+			var objectname string
+			if status == wttypes.TRANSCODING_FINISHED {
+				wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, fnTranscoded)
+			}
+
+			//TODO: upload into swift
+
+
+			os.Remove(fnTranscoded)
+			tws.WorkerUpdateStatus(worker.WORKER_STATUS_IDLE)
+			tws.WorkerUpdateProcess(nil)
+
+
+			notifyTaskStatus(task.ID, status, objectname)
+
+			time.Sleep(DELAY)
+		}
 	}()
 
 	logger.Log("terminated", <-errs)

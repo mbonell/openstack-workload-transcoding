@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"time"
 	"errors"
 
@@ -137,8 +136,6 @@ func (ds *DataStore) ListJobs() ([]wttypes.Job, error) {
 		return []wttypes.Job{}, err
 	}
 
-	fmt.Println("ListJobs total: ", len(results))
-
 	jobs := []wttypes.Job{}
 	for _, v := range results {
 		job := wttypes.Job{
@@ -157,9 +154,9 @@ func (ds *DataStore) ListJobs() ([]wttypes.Job, error) {
 		}
 
 		//Transcodings
-		transcodings := []wttypes.TranscodingProfile{}
+		transcodings := []wttypes.TranscodingTask{}
 		for _, vt := range resultsT {
-			t := wttypes.TranscodingProfile{
+			t := wttypes.TranscodingTask{
 				ID:         vt.ID.Hex(),
 				Profile:    vt.Profile,
 				ObjectName: vt.ObjectName,
@@ -226,8 +223,6 @@ func (ds *DataStore) InsertJob(job wttypes.Job) (string, error) {
 		}
 	}
 
-	fmt.Println("inserted with id:", jid.Hex())
-
 	return jid.Hex(), nil
 }
 
@@ -268,9 +263,9 @@ func (ds *DataStore) GetJob(id string) (wttypes.Job, error) {
 	}
 
 	//Transcodings
-	transcodings := []wttypes.TranscodingProfile{}
+	transcodings := []wttypes.TranscodingTask{}
 	for _, v := range results {
-		t := wttypes.TranscodingProfile{
+		t := wttypes.TranscodingTask{
 			ID:         v.ID.Hex(),
 			Profile:    v.Profile,
 			ObjectName: v.ObjectName,
@@ -283,10 +278,10 @@ func (ds *DataStore) GetJob(id string) (wttypes.Job, error) {
 	return job, nil
 }
 
-func (ds *DataStore) GetTranscoding(id string) (wttypes.TranscodingProfile, error) {
+func (ds *DataStore) GetTranscoding(id string) (wttypes.TranscodingTask, error) {
 	// Check is a valid ID
 	if !bson.IsObjectIdHex(id) {
-		return wttypes.TranscodingProfile{}, errors.New("Invalid ID")
+		return wttypes.TranscodingTask{}, errors.New("Invalid ID")
 	}
 
 	// Get "transcodings" collection
@@ -298,10 +293,10 @@ func (ds *DataStore) GetTranscoding(id string) (wttypes.TranscodingProfile, erro
 	result := TranscodingProfileDB{}
 	err := c.FindId(tid).One(&result)
 	if err != nil {
-		return wttypes.TranscodingProfile{}, err
+		return wttypes.TranscodingTask{}, err
 	}
 
-	t := wttypes.TranscodingProfile{
+	t := wttypes.TranscodingTask{
 		ID: result.ID.Hex(),
 		Profile: result.Profile,
 		ObjectName: result.ObjectName,
@@ -312,7 +307,7 @@ func (ds *DataStore) GetTranscoding(id string) (wttypes.TranscodingProfile, erro
 	return t, nil
 }
 
-func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingProfile) error {
+func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingTask) error {
 	// Check is a valid ID
 	if !bson.IsObjectIdHex(t.ID) {
 		return errors.New("Invalid ID")

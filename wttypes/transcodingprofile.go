@@ -10,16 +10,10 @@ const (
 	TRANSCODING_SKIPPED   = "skipped"
 )
 
-// TranscodingProfile is a struct with information regarding the transcoding
-type TranscodingProfile struct {
-	ID         string `json:"id"`
-	Profile    string `json:"profile"`
-	ObjectName string `json:"object_name"`
-	Status     string `json:"status"`
-}
-
+// TranscodingTask is a struct with information regarding the transcoding
 type TranscodingTask struct {
 	ID         string `json:"id"`
-	ObjectName string `json:"object_name"`
-	Profile    string `json:"profile"`
+	Profile    string `json:"profile,omitempty"`
+	ObjectName string `json:"object_name,omitempty"`
+	Status     string `json:"status,omitempty"`
 }

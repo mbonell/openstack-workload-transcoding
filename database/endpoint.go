@@ -94,7 +94,7 @@ func makeGetJobEndpoint(ds Service) endpoint.Endpoint {
 // UpdateTranscoding
 
 type updateTranscodingRequest struct {
-	Transcoding wttypes.TranscodingProfile
+	Transcoding wttypes.TranscodingTask
 }
 
 type updateTranscodingResponse struct {
@@ -119,7 +119,7 @@ type getTranscodingRequest struct {
 }
 
 type getTranscodingResponse struct {
-	Transcoding wttypes.TranscodingProfile `json:"transcoding,omitempty"`
+	Transcoding wttypes.TranscodingTask `json:"transcoding,omitempty"`
 	Err         error                      `json:"error,omitempty"`
 }
 

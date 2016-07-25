@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"errors"
 	"crypto/tls"
 
@@ -27,10 +26,10 @@ type Service interface {
 	ListJobs() ([]wttypes.Job, error)
 
 	//Update a transcoding in DB
-	UpdateTranscoding(t wttypes.TranscodingProfile) error
+	UpdateTranscoding(t wttypes.TranscodingTask) error
 
 	//Get a transcoding from DB
-	GetTranscoding(id string) (wttypes.TranscodingProfile, error)
+	GetTranscoding(id string) (wttypes.TranscodingTask, error)
 }
 
 type service struct {
@@ -38,8 +37,6 @@ type service struct {
 }
 
 func (s *service) InsertJob(job wttypes.Job) (string, error) {
-
-	fmt.Println("inserting job:", job)
 
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
@@ -67,8 +64,6 @@ func (s *service) InsertJob(job wttypes.Job) (string, error) {
 //}
 
 func (s *service) GetJob(id string) (wttypes.Job, error) {
-	fmt.Println("GetJob:", id)
-
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 
@@ -78,8 +73,6 @@ func (s *service) GetJob(id string) (wttypes.Job, error) {
 }
 
 func (s *service) ListJobs() ([]wttypes.Job, error) {
-	fmt.Println("listJob")
-
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 
@@ -88,9 +81,7 @@ func (s *service) ListJobs() ([]wttypes.Job, error) {
 	return jobs, err
 }
 
-func (s *service) UpdateTranscoding(t wttypes.TranscodingProfile) error {
-	fmt.Println("UpdateTranscoding:", t.ID)
-
+func (s *service) UpdateTranscoding(t wttypes.TranscodingTask) error {
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 
@@ -100,9 +91,7 @@ func (s *service) UpdateTranscoding(t wttypes.TranscodingProfile) error {
 }
 
 //Get a transcoding from DB
-func (s *service) GetTranscoding(id string) (wttypes.TranscodingProfile, error) {
-	fmt.Println("GetTranscoding: ", id)
-
+func (s *service) GetTranscoding(id string) (wttypes.TranscodingTask, error) {
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 

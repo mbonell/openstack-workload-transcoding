@@ -1,14 +1,16 @@
 package manager
 
 import (
-	"fmt"
-	"errors"
 	"crypto/tls"
+	"errors"
+	"fmt"
 
 	"github.com/go-resty/resty"
 
-	"gopkg.in/mgo.v2"
+	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"gopkg.in/mgo.v2"
+	"strings"
 )
 
 // Service is the interface that provides transcoding manager methods.
@@ -27,6 +29,9 @@ type Service interface {
 
 	// Get next Transcoding task
 	GetNextTask(workerAddr string) (wttypes.TranscodingTask, error)
+
+	// Update the status of a task
+	UpdateTaskStatus(id string, status string) error
 }
 
 type service struct {
@@ -34,11 +39,10 @@ type service struct {
 }
 
 func (s *service) AddTranscoding(id string, objectname string, profile string) error {
-	fmt.Println("[manager]", "AddNewTranscoding start...")
 	task := wttypes.TranscodingTask{
-		ID: id,
+		ID:         id,
 		ObjectName: objectname,
-		Profile: profile,
+		Profile:    profile,
 	}
 
 	datastore := NewDataStore(s.session)
@@ -48,8 +52,6 @@ func (s *service) AddTranscoding(id string, objectname string, profile string) e
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("[manager]", "added transcoding :", id)
 
 	return nil
 }
@@ -72,13 +74,72 @@ func (s *service) GetTotalTasksRunning() (int, error) {
 	return total, err
 }
 
-func (s * service) GetNextTask(workerAddr string) (wttypes.TranscodingTask, error) {
+func (s *service) GetNextTask(workerAddr string) (wttypes.TranscodingTask, error) {
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 
 	task, err := datastore.GetNextQueuedTask(workerAddr)
+	if err != nil {
+		return wttypes.TranscodingTask{}, err
+	}
+
+	// Update Job Service
+	body := struct {
+		Status string `json:"status"`
+	}{
+		Status: task.Status,
+	}
+
+	resp, err := resty.R().
+		SetBody(body).
+		Put(fmt.Sprintf("%s/transcodings/%s/status",
+			wtcommon.Servers["jobs"],
+			task.ID))
+
+	if err != nil {
+		//TODO: do something when status update fails
+	}
+
+	str := resp.String()
+	if strings.HasPrefix(str, `{"error"`) {
+		//TODO: do something when status update fails
+	}
 
 	return task, err
+}
+
+func (s *service) UpdateTaskStatus(id string, status string) error {
+	datastore := NewDataStore(s.session)
+	defer datastore.Close()
+
+	err := datastore.UpdateTaskStatus(id, status)
+	if err != nil {
+		return err
+	}
+
+	//// Update Job Service
+	//body := struct {
+	//	Status string `json:"status"`
+	//}{
+	//	Status: status,
+	//}
+	//
+	//resp, err := resty.R().
+	//	SetBody(body).
+	//	Put(fmt.Sprintf("%s/transcodings/%s/status",
+	//	wtcommon.Servers["jobs"],
+	//	id))
+	//
+	//if err != nil {
+	//	//TODO: do something when status update fails
+	//}
+	//
+	//str := resp.String()
+	//if strings.HasPrefix(str, `{"error"`) {
+	//	//TODO: do something when status update fails
+	//}
+
+	return nil
 }
 
 

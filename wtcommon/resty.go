@@ -52,14 +52,14 @@ func JSON2Job(s string) (wttypes.Job, error) {
 }
 
 type JSONTranscoding struct {
-	Transcoding wttypes.TranscodingProfile `json:"transcoding"`
+	Transcoding wttypes.TranscodingTask `json:"transcoding"`
 }
 
-func JSON2Transcoding(s string) (wttypes.TranscodingProfile, error) {
+func JSON2Transcoding(s string) (wttypes.TranscodingTask, error) {
 	var v JSONTranscoding
 
 	if err := json.NewDecoder(strings.NewReader(s)).Decode(&v); err != nil {
-		return wttypes.TranscodingProfile{}, errors.New("Can't decode JSON: " + s)
+		return wttypes.TranscodingTask{}, errors.New("Can't decode JSON: " + s)
 	}
 
 	return v.Transcoding, nil
@@ -78,4 +78,3 @@ func JSON2Task(s string) (wttypes.TranscodingTask, error) {
 
 	return v.Task, nil
 }
-

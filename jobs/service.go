@@ -1,17 +1,17 @@
 package jobs
 
 import (
-	"fmt"
-	"errors"
-	"strings"
 	"crypto/tls"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/go-resty/resty"
 
 	"github.com/rackspace/gophercloud"
 
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 // Service is the interface that provides jobs methods.
@@ -35,7 +35,10 @@ type service struct {
 }
 
 func (s *service) AddNewJob(job wttypes.Job) (string, error) {
-	fmt.Println("[jobs]", "AddNewJob")
+	// Verify we have transcodings to perform
+	if len(job.Transcodings) == 0 {
+		return "", wttypes.ErrNoTranscodings
+	}
 
 	//First let's upload to Object Storage
 	objectname, errOS := wtcommon.Upload2ObjectStorage(s.serviceObjectStorage, job.URLMedia, job.VideoName)
@@ -46,15 +49,10 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 		job.Status = wttypes.JOB_ERROR
 	}
 
-	fmt.Println("[jobs]", "calling REST in DB service")
-
 	// Ask DB to add job into DB (even with error, for logging purposes)
 	resp, err := resty.R().
 		SetBody(job).
 		Post(wtcommon.Servers["database"] + "/jobs")
-
-	fmt.Println("[jobs]", "after REST in DB service")
-	fmt.Println("[jobs]", "resp:", resp)
 
 	// Error in communication
 	if err != nil {
@@ -70,7 +68,6 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 
 	// Get ID
 	id, err := wtcommon.JSON2JobID(str)
-	fmt.Println("[jobs]", "id:", id)
 	if err != nil {
 		return id, err
 	}
@@ -80,19 +77,28 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 		return id, errors.New(wttypes.ErrCantUploadObject.Error() + ": " + errOS.Error())
 	}
 
+	// Let's send all transcodings tasks to Transcoding Manager
+	for _, v := range job.Transcodings {
+		resp, err := resty.R().
+			SetBody(v).
+			Post(wtcommon.Servers["manager"] + "/tasks")
+
+		if err != nil {
+			//TODO: do something when status update fails
+		}
+
+		str := resp.String()
+		if strings.HasPrefix(str, `{"error"`) {
+			//TODO: do something when status update fails
+		}
+	}
+
 	return id, nil
 }
 
 func (s *service) GetJobStatus(jobID string) (string, error) {
-	fmt.Println("[jobs]", "GetJobStatus")
-
-	fmt.Println("[jobs]", "calling REST in DB service")
-
 	// Ask DB to get job from DB
 	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
-
-	fmt.Println("[jobs]", "after REST in DB service")
-	fmt.Println("[jobs]", "resp:", resp)
 
 	// Error in communication
 	if err != nil {
@@ -113,21 +119,12 @@ func (s *service) GetJobStatus(jobID string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println("[jobs]", "job:", job)
-
 	return job.Status, err
 }
 
 func (s *service) CancelJob(jobID string) error {
-	fmt.Println("[jobs]", "CancelJob")
-
-	fmt.Println("[jobs]", "calling REST in DB service")
-
 	// Ask DB to get job from DB
 	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
-
-	fmt.Println("[jobs]", "after REST in DB service")
-	fmt.Println("[jobs]", "resp:", resp)
 
 	// Error in communication
 	if err != nil {
@@ -176,16 +173,8 @@ func (s *service) CancelJob(jobID string) error {
 }
 
 func (s *service) UpdateTranscodingStatus(id string, status string, objectname string) error {
-	fmt.Println("[jobs]", "UpdateTranscodingStatus")
-	fmt.Println("[jobs]", id, status, objectname)
-
-	fmt.Println("[jobs]", "calling REST in DB service")
-
 	// Ask DB to get transcoding from DB
 	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/transcodings/" + id)
-
-	fmt.Println("[jobs]", "after REST in DB service")
-	fmt.Println("[jobs]", "resp:", resp)
 
 	// Error in communication
 	if err != nil {
@@ -212,8 +201,6 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 		t.ObjectName = objectname
 	}
 
-	fmt.Println("transcoding to be sent: ", t)
-
 	// Update DB
 	resp, err = resty.R().
 		SetBody(t).
@@ -231,8 +218,6 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 		return wtcommon.JSON2Err(str)
 
 	}
-
-	fmt.Println("[jobs]", "transcoding status updated without any problem")
 
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"errors"
 )
 
 const (
@@ -168,11 +169,35 @@ func (ds *DataStore) GetNextQueuedTask(workerAddr string) (wttypes.TranscodingTa
 	}, nil
 }
 
-func (ds *DataStore) UpdateTaskStatus(ID string, status string) error {
+func (ds *DataStore) UpdateTaskStatus(id string, status string) error {
+	// Check is a valid ID
+	if !bson.IsObjectIdHex(id) {
+		return errors.New("Invalid ID")
+	}
+
 	// Get "tasks" collection
-	//c := ds.session.DB(MongoDB).C(MongoTasksCollection)
+	c := ds.session.DB(MongoDB).C(MongoTasksCollection)
+
+	// Query for task
+	tid := bson.ObjectIdHex(id)
+
+	t := TaskDB{}
+	err := c.FindId(tid).One(&t)
+	if err != nil {
+		return err
+	}
+
+	// Update Status
+	t.Status = status
+	if t.Status == wttypes.TRANSCODING_FINISHED {
+		t.Ended = time.Now()
+	}
+
+	// Update in DB
+	_, err = c.UpsertId(tid, t)
+	if err != nil {
+		return err
+	}
 
 	return nil
-	//TODO COMPLETEEEEE
-
 }

@@ -75,7 +75,7 @@ type getNextTaskRequest struct {
 
 type getNextTaskResponse struct {
 	Task wttypes.TranscodingTask `json:"task,omitempty"`
-	Err  error           `json:"error,omitempty"`
+	Err  error                   `json:"error,omitempty"`
 }
 
 func (r getNextTaskResponse) error() error { return r.Err }
@@ -85,5 +85,26 @@ func makeGetNextTaskEndpoint(tms Service) endpoint.Endpoint {
 		req := request.(getNextTaskRequest)
 		task, err := tms.GetNextTask(req.WorkerAddr)
 		return getNextTaskResponse{Task: task, Err: err}, nil
+	}
+}
+
+// UpdateTaskStatus
+
+type updateTaskStatusRequest struct {
+	ID         string
+	Status     string
+}
+
+type updateTaskStatusResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r updateTaskStatusResponse) error() error { return r.Err }
+
+func makeUpdateTaskStatusEndpoint(js Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(updateTaskStatusRequest)
+		err := js.UpdateTaskStatus(req.ID, req.Status)
+		return updateTaskStatusResponse{Err: err}, nil
 	}
 }

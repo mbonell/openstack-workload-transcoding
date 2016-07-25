@@ -22,7 +22,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"url_media":"http://obazavil-nuc/big_buck_bunny_720p_1mb.mp4", "video_name":"conejo", "transcoding_targets":[{"name":"transcode-1","profile":"iphone6","objectname":""},{"name":"transcode-2","profile":"ipadmini","object_name":""}]}' -X POST https://localhost:8081/jobs
+	// test: curl -k -H "Content-Type: application/json" -d '{"url_media":"http://obazavil-nuc/big_buck_bunny_720p_1mb.mp4", "video_name":"conejo", "transcodings":[{"profile":"iphone6"},{"profile":"ipadmini"}]}' -X POST https://localhost:8081/jobs
 	addNewJobHandler := kithttp.NewServer(
 		ctx,
 		makeAddNewJobEndpoint(js),
@@ -63,7 +63,8 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 	r.Handle("/jobs", addNewJobHandler).Methods("POST")
 	r.Handle("/jobs/{id}", getJobStatusHandler).Methods("GET")
 	r.Handle("/jobs/{id}", cancelJobHandler).Methods("DELETE")
-	r.Handle("/jobs/{id}/transcoding/{ttid}/status", updateTranscodingStatusHandler).Methods("PUT")
+
+	r.Handle("/transcodings/{id}/status", updateTranscodingStatusHandler).Methods("PUT")
 
 	return r
 

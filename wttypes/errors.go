@@ -25,4 +25,6 @@ var (
 	ErrNoTaskRunning = errors.New("No task is currently running")
 
 	ErrNoProcessRunning = errors.New("No FFMPEG process is currently running")
+
+	ErrNoTranscodings = errors.New("No Transcodings were specified")
 )

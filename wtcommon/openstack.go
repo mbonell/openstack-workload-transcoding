@@ -123,8 +123,6 @@ func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, 
 		return "", err
 	}
 
-	fmt.Println("uploaded object into ObjectStorage: ", name)
-
 	return name, nil
 }
 
