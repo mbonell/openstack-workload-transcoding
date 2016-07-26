@@ -48,14 +48,14 @@ func MakeHandler(ctx context.Context, ds Service, logger kitlog.Logger) http.Han
 		opts...,
 	)
 
-	////test: curl -k -H "Content-Type: application/json" -d '{"id":"1", "url_media":"fake_url", "video_name":"fake_conejo"}' -X PUT https://localhost:8080/jobs/1
-	//updateJobHandler := kithttp.NewServer(
-	//	ctx,
-	//	makeUpdateJobEndpoint(ds),
-	//	decodeUpdateJobRequest,
-	//	encodeResponse,
-	//	opts...,
-	//)
+	//test: curl -k -H "Content-Type: application/json" -d '{"id":"1", "url_media":"fake_url", "video_name":"fake_conejo"}' -X PUT https://localhost:8080/jobs/1
+	updateJobHandler := kithttp.NewServer(
+		ctx,
+		makeUpdateJobEndpoint(ds),
+		decodeUpdateJobRequest,
+		encodeResponse,
+		opts...,
+	)
 
 	// test: curl -k -H "Content-Type: application/json" -d '{"id":"578fb746be4ead07d6289554","profile":"iphone6","object_name":"objectchanged","status":"queued"}' -X PUT https://localhost:8080/transcodings/578fb746be4ead07d6289554
 	updateTranscodingHandler := kithttp.NewServer(
@@ -79,7 +79,7 @@ func MakeHandler(ctx context.Context, ds Service, logger kitlog.Logger) http.Han
 
 	r.Handle("/jobs", insertJobHandler).Methods("POST")
 	r.Handle("/jobs/{id}", getJobHandler).Methods("GET")
-	//r.Handle("/jobs/{id}", updateJobHandler).Methods("PUT")
+	r.Handle("/jobs/{id}", updateJobHandler).Methods("PUT")
 	r.Handle("/jobs", listJobsHandler).Methods("GET")
 
 	r.Handle("/transcodings/{id}", getTranscodingHandler).Methods("GET")
@@ -115,27 +115,27 @@ func decodeGetJobRequest(_ context.Context, r *http.Request) (interface{}, error
 	return getJobRequest{ID: string(id)}, nil
 }
 
-//func decodeUpdateJobRequest(_ context.Context, r *http.Request) (interface{}, error) {
-//	var job wttypes.Job
-//
-//	vars := mux.Vars(r)
-//	id, ok := vars["id"]
-//	if !ok {
-//		return nil, wttypes.ErrBadRoute
-//	}
-//
-//	if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
-//		return nil, err
-//	}
-//
-//	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
-//
-//	if id != job.ID {
-//		return nil, wttypes.ErrMismatchID
-//	}
-//
-//	return updateJobRequest{Job:job}, nil
-//}
+func decodeUpdateJobRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var job wttypes.Job
+
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		return nil, wttypes.ErrBadRoute
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
+		return nil, err
+	}
+
+	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
+
+	if id != job.ID {
+		return nil, wttypes.ErrMismatchID
+	}
+
+	return updateJobRequest{Job:job}, nil
+}
 
 func decodeGetTranscodingRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)

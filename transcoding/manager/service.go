@@ -10,6 +10,7 @@ import (
 	"gopkg.in/mgo.v2"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"strings"
 )
 
 // Service is the interface that provides transcoding manager methods.
@@ -17,8 +18,8 @@ type Service interface {
 	// Add a new transcoding task
 	AddTranscoding(id string, objectname string, profile string) error
 
-	//// Cancel a transcoding task
-	//CancelTranscoding(ttID string) (error)
+	// Cancel a transcoding task
+	CancelTranscoding(id string) error
 
 	// Get total of queued tasks
 	GetTotalTasksQueued() (int, error)
@@ -118,6 +119,36 @@ func (s *service) UpdateTaskStatus(id string, status string) error {
 	//if strings.HasPrefix(str, `{"error"`) {
 	//	//TODO: do something when status update fails
 	//}
+
+	return nil
+}
+
+func (s *service) CancelTranscoding(id string) error {
+	fmt.Println("received cancel request for:", id)
+	datastore := NewDataStore(s.session)
+	defer datastore.Close()
+
+	addr, err := datastore.CancelTask(id)
+	if err != nil {
+		return err
+	}
+
+	// If addr is not "", let's ask worker to cancel
+	if addr != "" {
+		fmt.Println("asking worker for cancellation:", addr)
+		fmt.Println("url:", addr + ":8083/tasks")
+		resp, err := resty.R().
+			Delete(addr + ":8083/tasks")
+
+		if err != nil {
+			//TODO: do something when cancel fails
+		}
+
+		str := resp.String()
+		if strings.HasPrefix(str, `{"error"`) {
+			//TODO: do something when cancel fails
+		}
+	}
 
 	return nil
 }

@@ -283,7 +283,7 @@ func (ds *DataStore) GetJob(id string) (wttypes.Job, error) {
 
 	// Query for transcodings
 	var results []TranscodingProfileDB
-	err = c.Find(bson.M{"job_id": jid}).All(&results)
+	err = c.Find(bson.M{"job_id": jid.Hex()}).All(&results)
 	if err != nil {
 		return wttypes.Job{}, err
 	}
@@ -354,6 +354,13 @@ func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingTask) error {
 	started := oldt.Started
 	if t.Status == wttypes.TRANSCODING_RUNNING && oldt.Status == wttypes.TRANSCODING_QUEUED {
 		started = time.Now()
+
+		// Change job status to RUNNING if needed
+		job, err := ds.GetJob(oldt.JobID)
+		if err == nil && job.Status == wttypes.JOB_QUEUED {
+			job.Status = wttypes.JOB_RUNNING
+			ds.UpdateJob(job)
+		}
 	}
 
 	// Update Ended if needed
@@ -382,38 +389,98 @@ func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingTask) error {
 		return err
 	}
 
-	// Look for pending transcodings of same job
-	jid := bson.ObjectIdHex(oldt.JobID)
+	// If we finished, let's see if we can mark Job as FINISHED
+	if t.Status == wttypes.TRANSCODING_FINISHED {
+		// Look for pending transcodings of same job
+		jid := bson.ObjectIdHex(oldt.JobID)
 
-	var results []struct {
-		Status string `bson:"status"`
+		var results []struct {
+			Status string `bson:"status"`
+		}
+		condStatus := bson.M{"$in": []string{wttypes.TRANSCODING_QUEUED, wttypes.TRANSCODING_RUNNING}}
+		err = c.Find(bson.M{"job_id": jid.Hex(), "status": condStatus}).Select(bson.M{"status": 1}).All(&results)
+		if err != nil {
+			return err
+		}
+
+		// Update job in case no more pending transcodings...
+		if len(results) == 0 {
+			fmt.Println("no more transcodings for this job!! let's see if we need to update it on DB:", jid.Hex())
+			// Get "jobs" collection
+			c = ds.session.DB(MongoDB).C(MongoJobsCollection)
+
+			job := JobDB{}
+			err := c.FindId(jid).One(&job)
+			if err != nil {
+				return err
+			}
+
+			// Only update if job was queued or running
+			if job.Status == wttypes.JOB_QUEUED || job.Status == wttypes.JOB_RUNNING {
+				fmt.Println("marking job as finished:", jid.Hex())
+				job.Status = wttypes.JOB_FINISHED
+				job.Ended = time.Now()
+
+				// Update in DB
+				_, err = c.UpsertId(jid, job)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
-	condStatus := bson.M{"$in": []string{wttypes.TRANSCODING_QUEUED, wttypes.TRANSCODING_RUNNING}}
-	err = c.Find(bson.M{"job_id": jid.Hex(), "status": condStatus}).Select(bson.M{"status": 1}).All(&results)
+
+	return nil
+}
+
+func (ds *DataStore) UpdateJob(job wttypes.Job) error {
+	// Check is a valid ID
+	if !bson.IsObjectIdHex(job.ID) {
+		return errors.New("Invalid ID")
+	}
+
+	// Get "jobs" collection
+	c := ds.session.DB(MongoDB).C(MongoJobsCollection)
+
+	// Query for job
+	jid := bson.ObjectIdHex(job.ID)
+
+	oldj := JobDB{}
+	err := c.FindId(jid).One(&oldj)
 	if err != nil {
 		return err
 	}
 
-	// Update job in case no more pending transcodings...
-	if len(results) == 0 {
-		fmt.Println("job finished!! let's update it on DB:", jid.Hex())
-		// Get "jobs" collection
-		c = ds.session.DB(MongoDB).C(MongoJobsCollection)
+	// Update Started if needed
+	started := oldj.Started
+	if job.Status == wttypes.JOB_RUNNING && oldj.Status == wttypes.JOB_QUEUED {
+		started = time.Now()
+	}
 
-		job := JobDB{}
-		err := c.FindId(jid).One(&job)
-		if err != nil {
-			return err
-		}
+	// Update Ended if needed
+	ended := oldj.Ended
+	if job.Status == wttypes.JOB_FINISHED && oldj.Status == wttypes.JOB_RUNNING {
+		ended = time.Now()
+	}
 
-		job.Status = wttypes.JOB_FINISHED
-		job.Ended = time.Now()
+	// Update document
+	newj := JobDB{
+		ID: jid,
 
-		// Update in DB
-		_, err = c.UpsertId(jid, job)
-		if err != nil {
-			return err
-		}
+		Started: started,
+		Ended: ended,
+		Status: job.Status,
+
+		URLMedia: oldj.URLMedia,
+		VideoName: oldj.VideoName,
+		ObjectName: oldj.ObjectName,
+		Added: oldj.Added,
+	}
+
+	// Update in DB
+	_, err = c.UpsertId(jid, newj)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -16,8 +16,8 @@ type Service interface {
 	// Insert a new job into DB
 	InsertJob(job wttypes.Job) (wttypes.JobIDs, error)
 
-	//// Update a Job in DB
-	//UpdateJob(job wttypes.Job) error
+	// Update a Job in DB
+	UpdateJob(job wttypes.Job) error
 
 	// Get information from DB about a particular job
 	GetJob(id string) (wttypes.Job, error)
@@ -46,22 +46,14 @@ func (s *service) InsertJob(job wttypes.Job) (wttypes.JobIDs, error) {
 	return ids, err
 }
 
-//func (s * service) UpdateJob (job wttypes.Job) error {
-//	// TODO change to MongoDB
-//
-//	fmt.Println("updating job", job.ID)
-//
-//	//_, ok := s.m[job.ID]
-//	//if !ok {
-//	//	return wttypes.ErrNotFound
-//	//}
-//	//
-//	//s.m[job.ID] = job
-//
-//	fmt.Println("job updated in memory:", job)
-//
-//	return nil
-//}
+func (s * service) UpdateJob (job wttypes.Job) error {
+	datastore := NewDataStore(s.session)
+	defer datastore.Close()
+
+	err := datastore.UpdateJob(job)
+
+	return err
+}
 
 func (s *service) GetJob(id string) (wttypes.Job, error) {
 	datastore := NewDataStore(s.session)

@@ -151,8 +151,39 @@ func (s *service) CancelJob(jobID string) error {
 		return err
 	}
 
+	// Can't cancel if is not running
+	if job.Status == wttypes.JOB_FINISHED || job.Status == wttypes.JOB_CANCELLED {
+		return wttypes.ErrCantCancel
+	}
+
+	fmt.Println("transcodings to cancel:", job.Transcodings)
+
+	// First, let's cancel all pending transcodings
+	for _, v := range job.Transcodings {
+		//Update in DB
+		err:= s.UpdateTranscodingStatus(v.ID, wttypes.TRANSCODING_CANCELLED, "")
+		if err != nil {
+			return err
+		}
+
+		// Ask manager to cancel transcodings
+		fmt.Println("asking manager to cancel URL:", wtcommon.Servers["manager"] + "/tasks/" + v.ID)
+		if v.Status == wttypes.TRANSCODING_QUEUED || v.Status == wttypes.TRANSCODING_RUNNING {
+			resp, err := resty.R().
+				Delete(wtcommon.Servers["manager"] + "/tasks/" + v.ID)
+
+			if err != nil {
+				//TODO: do something when cancel in manager fails
+			}
+
+			str := resp.String()
+			if strings.HasPrefix(str, `{"error"`) {
+				//TODO: do something when cancel in manager fails
+			}
+		}
+	}
+
 	// Cancel job
-	//TODO: Cancel workers, etc.
 	job.Status = wttypes.JOB_CANCELLED
 
 	// Update DB
@@ -173,7 +204,7 @@ func (s *service) CancelJob(jobID string) error {
 
 	}
 
-	fmt.Println("[jobs]", "cancelled without any problem")
+	fmt.Println("[jobs]", "cancelled without any problem:", jobID)
 
 	return nil
 }
@@ -181,7 +212,7 @@ func (s *service) CancelJob(jobID string) error {
 func (s *service) UpdateTranscodingStatus(id string, status string, objectname string) error {
 	fmt.Println("[jobs] received update status request:", id, status, objectname)
 
-	// Ask DB to update transcoding from DB
+	// Ask DB to get transcoding from DB
 	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/transcodings/" + id)
 
 	// Error in communication

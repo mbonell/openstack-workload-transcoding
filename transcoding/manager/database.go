@@ -209,3 +209,30 @@ func (ds *DataStore) UpdateTaskStatus(id string, status string) error {
 	fmt.Println("[manager] UpdateTaskStatus updated:", id, status)
 	return nil
 }
+
+func (ds *DataStore) CancelTask(id string) (string, error) {
+	fmt.Println("[database] CancelTask:", id)
+	// Get "tasks" collection
+	c := ds.session.DB(MongoDB).C(MongoTasksCollection)
+
+	t := TaskDB{}
+	err := c.Find(bson.M{"transcoding_id": id}).One(&t)
+	if err != nil {
+		return "", err
+	}
+
+	// Let's cancel on DB
+	if t.Status == wttypes.TRANSCODING_QUEUED {
+		t.Status = wttypes.TRANSCODING_CANCELLED
+
+		// Update in DB
+		_, err = c.UpsertId(t.ID, t)
+		if err != nil {
+			return "", err
+		}
+	} else if t.Status == wttypes.TRANSCODING_RUNNING {
+		return t.WorkerAddr, nil
+	}
+
+	return "", nil
+}

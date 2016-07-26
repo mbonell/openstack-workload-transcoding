@@ -261,6 +261,7 @@ func main() {
 
 			// Update process in the service (por cancellation purposes)
 			tws.WorkerUpdateProcess(cmd.Process)
+			fmt.Println("ENCODING...")
 
 			// Wait for ffmpeg to finish
 			exitCode := 0

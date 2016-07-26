@@ -49,26 +49,26 @@ func makeInsertJobEndpoint(ds Service) endpoint.Endpoint {
 	}
 }
 
-//// UpdateJob
-//
-//type updateJobRequest struct {
-//	Job wttypes.Job
-//}
-//
-//type updateJobResponse struct {
-//	Err error	`json:"error,omitempty"`
-//}
-//
-//func (r updateJobResponse) error() error { return r.Err }
-//
-//func makeUpdateJobEndpoint(ds Service) endpoint.Endpoint {
-//	return func(ctx context.Context, request interface{}) (interface{}, error) {
-//		req := request.(updateJobRequest)
-//		err := ds.UpdateJob(req.Job)
-//
-//		return updateJobResponse{Err: err}, nil
-//	}
-//}
+// UpdateJob
+
+type updateJobRequest struct {
+	Job wttypes.Job
+}
+
+type updateJobResponse struct {
+	Err error	`json:"error,omitempty"`
+}
+
+func (r updateJobResponse) error() error { return r.Err }
+
+func makeUpdateJobEndpoint(ds Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(updateJobRequest)
+		err := ds.UpdateJob(req.Job)
+
+		return updateJobResponse{Err: err}, nil
+	}
+}
 
 // GetJob
 

@@ -9,6 +9,7 @@ import (
 	"github.com/go-resty/resty"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
+	"fmt"
 )
 
 const (
@@ -45,6 +46,8 @@ func (s *service) GetStatus() (string, error) {
 func (s *service) CancelTask() error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
+	fmt.Println("cancelling task...")
 
 	if s.status == WORKER_STATUS_IDLE {
 		return wttypes.ErrNoTaskRunning

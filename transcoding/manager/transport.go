@@ -67,6 +67,15 @@ func MakeHandler(ctx context.Context, tms Service, logger kitlog.Logger) http.Ha
 		opts...,
 	)
 
+	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running"}' -X DELETE https://localhost:8082/tasks/1
+	cancelTaskHandler := kithttp.NewServer(
+		ctx,
+		makeCancelTaskEndpoint(tms),
+		decodeCancelTaskRequest,
+		encodeResponse,
+		opts...,
+	)
+
 	r := mux.NewRouter()
 
 	r.Handle("/tasks", addTranscodingHandler).Methods("POST")
@@ -74,6 +83,7 @@ func MakeHandler(ctx context.Context, tms Service, logger kitlog.Logger) http.Ha
 	r.Handle("/tasks/queued", getTotalTasksQueuedHandler).Methods("GET")
 	r.Handle("/tasks/running", getTotalTasksRunningHandler).Methods("GET")
 	r.Handle("/tasks/{id}/status", updateTaskStatusHandler).Methods("PUT")
+	r.Handle("/tasks/{id}", cancelTaskHandler).Methods("DELETE")
 
 	return r
 
@@ -138,6 +148,17 @@ func decodeUpdateTaskStatusRequest(_ context.Context, r *http.Request) (interfac
 
 
 	return updateTaskStatusRequest{ID: id, Status: body.Status}, nil
+}
+
+func decodeCancelTaskRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+
+	id, ok := vars["id"]
+	if !ok {
+		return nil, wttypes.ErrBadRoute
+	}
+
+	return cancelTaskRequest{ID: id}, nil
 }
 
 type errorer interface {

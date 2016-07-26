@@ -27,4 +27,6 @@ var (
 	ErrNoProcessRunning = errors.New("No FFMPEG process is currently running")
 
 	ErrNoTranscodings = errors.New("No Transcodings were specified")
+
+	ErrCantCancel = errors.New("Can't cancel job: finished already or was already cancelled")
 )

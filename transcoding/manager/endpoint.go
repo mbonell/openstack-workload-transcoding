@@ -91,8 +91,8 @@ func makeGetNextTaskEndpoint(tms Service) endpoint.Endpoint {
 // UpdateTaskStatus
 
 type updateTaskStatusRequest struct {
-	ID         string
-	Status     string
+	ID     string
+	Status string
 }
 
 type updateTaskStatusResponse struct {
@@ -106,5 +106,25 @@ func makeUpdateTaskStatusEndpoint(js Service) endpoint.Endpoint {
 		req := request.(updateTaskStatusRequest)
 		err := js.UpdateTaskStatus(req.ID, req.Status)
 		return updateTaskStatusResponse{Err: err}, nil
+	}
+}
+
+// CancelTask
+
+type cancelTaskRequest struct {
+	ID string
+}
+
+type cancelTaskResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r cancelTaskResponse) error() error { return r.Err }
+
+func makeCancelTaskEndpoint(tms Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(cancelTaskRequest)
+		err := tms.CancelTranscoding(req.ID)
+		return getNextTaskResponse{Err: err}, nil
 	}
 }
