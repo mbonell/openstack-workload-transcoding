@@ -14,7 +14,7 @@ import (
 // Service is the interface that provides booking methods.
 type Service interface {
 	// Insert a new job into DB
-	InsertJob(job wttypes.Job) (string, error)
+	InsertJob(job wttypes.Job) (wttypes.JobIDs, error)
 
 	//// Update a Job in DB
 	//UpdateJob(job wttypes.Job) error
@@ -36,14 +36,14 @@ type service struct {
 	session *mgo.Session
 }
 
-func (s *service) InsertJob(job wttypes.Job) (string, error) {
+func (s *service) InsertJob(job wttypes.Job) (wttypes.JobIDs, error) {
 
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 
-	id, err := datastore.InsertJob(job)
+	ids, err := datastore.InsertJob(job)
 
-	return id, err
+	return ids, err
 }
 
 //func (s * service) UpdateJob (job wttypes.Job) error {

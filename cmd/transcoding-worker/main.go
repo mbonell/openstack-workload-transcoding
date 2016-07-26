@@ -43,7 +43,7 @@ func getIP() (string, error) {
 }
 
 func notifyTaskStatus(id string, status string, objectname string) {
-
+	fmt.Println("[worker] notifyTaskStatus:", id, status, objectname)
 	// Update Manager Service
 	bodyM := struct {
 		Status string `json:"status"`
@@ -51,20 +51,25 @@ func notifyTaskStatus(id string, status string, objectname string) {
 		Status: status,
 	}
 
+	fmt.Println("[main] statusM", bodyM.Status)
 	resp, err := resty.R().
 		SetBody(bodyM).
 		Put(fmt.Sprintf("%s/tasks/%s/status",
-		wtcommon.Servers["jobs"],
+		wtcommon.Servers["manager"],
 		id))
 
 	if err != nil {
+		fmt.Println("[worker] notify err:", err)
 		//TODO: do something when status update fails
 	}
 
 	str := resp.String()
 	if strings.HasPrefix(str, `{"error"`) {
+		fmt.Println("[worker] notify err:", err)
 		//TODO: do something when status update fails
 	}
+
+	fmt.Println("notified manager and jobs:", id, status, objectname)
 
 	// Update Jobs Service
 	bodyJ := struct {
@@ -75,6 +80,7 @@ func notifyTaskStatus(id string, status string, objectname string) {
 		ObjectName: objectname,
 	}
 
+	fmt.Println("[main] statusJ", bodyJ.Status)
 	resp, err = resty.R().
 		SetBody(bodyJ).
 		Put(fmt.Sprintf("%s/transcodings/%s/status",
@@ -82,11 +88,13 @@ func notifyTaskStatus(id string, status string, objectname string) {
 			id))
 
 	if err != nil {
+		fmt.Println("[worker] notify err:", err)
 		//TODO: do something when status update fails
 	}
 
 	str = resp.String()
 	if strings.HasPrefix(str, `{"error"`) {
+		fmt.Println("[worker] notify err:", err)
 		//TODO: do something when status update fails
 	}
 }
@@ -184,6 +192,8 @@ func main() {
 				time.Sleep(DELAY)
 				continue
 			}
+
+			fmt.Println("[worker] received task:", task)
 
 			// Everything fine so far, let's update our status
 			tws.WorkerUpdateStatus(worker.WORKER_STATUS_BUSY)

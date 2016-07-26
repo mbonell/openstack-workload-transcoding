@@ -7,10 +7,9 @@ import (
 
 	"github.com/go-resty/resty"
 
-	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 	"gopkg.in/mgo.v2"
-	"strings"
+
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 // Service is the interface that provides transcoding manager methods.
@@ -39,6 +38,7 @@ type service struct {
 }
 
 func (s *service) AddTranscoding(id string, objectname string, profile string) error {
+	// Add task
 	task := wttypes.TranscodingTask{
 		ID:         id,
 		ObjectName: objectname,
@@ -52,6 +52,8 @@ func (s *service) AddTranscoding(id string, objectname string, profile string) e
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("[manager] added transcoding:", id, profile, objectname)
 
 	return nil
 }
@@ -81,28 +83,6 @@ func (s *service) GetNextTask(workerAddr string) (wttypes.TranscodingTask, error
 	task, err := datastore.GetNextQueuedTask(workerAddr)
 	if err != nil {
 		return wttypes.TranscodingTask{}, err
-	}
-
-	// Update Job Service
-	body := struct {
-		Status string `json:"status"`
-	}{
-		Status: task.Status,
-	}
-
-	resp, err := resty.R().
-		SetBody(body).
-		Put(fmt.Sprintf("%s/transcodings/%s/status",
-			wtcommon.Servers["jobs"],
-			task.ID))
-
-	if err != nil {
-		//TODO: do something when status update fails
-	}
-
-	str := resp.String()
-	if strings.HasPrefix(str, `{"error"`) {
-		//TODO: do something when status update fails
 	}
 
 	return task, err

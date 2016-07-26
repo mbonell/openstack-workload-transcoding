@@ -7,7 +7,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"errors"
+	"fmt"
 )
 
 const (
@@ -16,14 +16,15 @@ const (
 )
 
 type TaskDB struct {
-	ID         bson.ObjectId `bson:"_id,omitempty"`
-	ObjectName string        `bson:"object_name"`
-	Profile    string        `bson:"profile"`
-	WorkerAddr string        `bson:"worker_addr"`
-	Added      time.Time     `bson:"added"`
-	Started    time.Time     `bson:"started"`
-	Ended      time.Time     `bson:"ended"`
-	Status     string        `bson:"status"`
+	ID            bson.ObjectId `bson:"_id"`
+	TranscodingID string        `bson:"transcoding_id"`
+	ObjectName    string        `bson:"object_name"`
+	Profile       string        `bson:"profile"`
+	WorkerAddr    string        `bson:"worker_addr"`
+	Added         time.Time     `bson:"added"`
+	Started       time.Time     `bson:"started"`
+	Ended         time.Time     `bson:"ended"`
+	Status        string        `bson:"status"`
 }
 
 type DataStore struct {
@@ -67,6 +68,18 @@ func CreateMongoSession() (*mgo.Session, error) {
 		return nil, err
 	}
 
+	idxTransactionID := mgo.Index{
+		Key:        []string{"transaction_id"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxTransactionID)
+	if err != nil {
+		return nil, err
+	}
+
 	idxStatus := mgo.Index{
 		Key:        []string{"status"},
 		Unique:     false,
@@ -86,11 +99,12 @@ func (ds *DataStore) AddTask(task wttypes.TranscodingTask) (string, error) {
 	id := bson.NewObjectId()
 
 	t := TaskDB{
-		ID:         id,
-		ObjectName: task.ObjectName,
-		Profile:    task.Profile,
-		Status:     wttypes.TRANSCODING_QUEUED,
-		Added:      time.Now(),
+		ID:            id,
+		TranscodingID: task.ID,
+		ObjectName:    task.ObjectName,
+		Profile:       task.Profile,
+		Status:        wttypes.TRANSCODING_QUEUED,
+		Added:         time.Now(),
 	}
 
 	// Get "tasks" collection
@@ -102,7 +116,7 @@ func (ds *DataStore) AddTask(task wttypes.TranscodingTask) (string, error) {
 		return "", err
 	}
 
-	return id.Hex(), nil
+	return task.ID, nil
 }
 
 func (ds *DataStore) GetTotalTasksQueued() (int, error) {
@@ -163,26 +177,19 @@ func (ds *DataStore) GetNextQueuedTask(workerAddr string) (wttypes.TranscodingTa
 	}
 
 	return wttypes.TranscodingTask{
-		ID:         result.ID.Hex(),
+		ID:         result.TranscodingID,
 		ObjectName: result.ObjectName,
 		Profile:    result.Profile,
 	}, nil
 }
 
 func (ds *DataStore) UpdateTaskStatus(id string, status string) error {
-	// Check is a valid ID
-	if !bson.IsObjectIdHex(id) {
-		return errors.New("Invalid ID")
-	}
-
+	fmt.Println("[database] UpdateTaskStatus:", id, status)
 	// Get "tasks" collection
 	c := ds.session.DB(MongoDB).C(MongoTasksCollection)
 
-	// Query for task
-	tid := bson.ObjectIdHex(id)
-
 	t := TaskDB{}
-	err := c.FindId(tid).One(&t)
+	err := c.Find(bson.M{"transcoding_id": id}).One(&t)
 	if err != nil {
 		return err
 	}
@@ -194,10 +201,11 @@ func (ds *DataStore) UpdateTaskStatus(id string, status string) error {
 	}
 
 	// Update in DB
-	_, err = c.UpsertId(tid, t)
+	_, err = c.UpsertId(t.ID, t)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("[manager] UpdateTaskStatus updated:", id, status)
 	return nil
 }

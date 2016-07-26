@@ -66,19 +66,23 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 		return "", wtcommon.JSON2Err(str)
 	}
 
-	// Get ID
-	id, err := wtcommon.JSON2JobID(str)
+	// Get IDs (job and transcodings)
+	ids, err := wtcommon.JSON2JobIDs(str)
 	if err != nil {
-		return id, err
+		return "", err
 	}
 
 	// If job is in ERROR status, let's notify error even if everything else was OK
 	if job.Status == wttypes.JOB_ERROR {
-		return id, errors.New(wttypes.ErrCantUploadObject.Error() + ": " + errOS.Error())
+		return ids.ID, errors.New(wttypes.ErrCantUploadObject.Error() + ": " + errOS.Error())
 	}
 
+	fmt.Println("[jobs] added job:", ids.ID)
+
 	// Let's send all transcodings tasks to Transcoding Manager
-	for _, v := range job.Transcodings {
+	for _, v := range ids.Transcodings {
+		v.ObjectName = job.ObjectName
+
 		resp, err := resty.R().
 			SetBody(v).
 			Post(wtcommon.Servers["manager"] + "/tasks")
@@ -91,9 +95,11 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 		if strings.HasPrefix(str, `{"error"`) {
 			//TODO: do something when status update fails
 		}
+
+		fmt.Println("[jobs] added task in manager:", v.ID, " ", v.Profile, " ", v.ObjectName)
 	}
 
-	return id, nil
+	return ids.ID, nil
 }
 
 func (s *service) GetJobStatus(jobID string) (string, error) {
@@ -173,11 +179,14 @@ func (s *service) CancelJob(jobID string) error {
 }
 
 func (s *service) UpdateTranscodingStatus(id string, status string, objectname string) error {
-	// Ask DB to get transcoding from DB
+	fmt.Println("[jobs] received update status request:", id, status, objectname)
+
+	// Ask DB to update transcoding from DB
 	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/transcodings/" + id)
 
 	// Error in communication
 	if err != nil {
+		fmt.Println("err comm:", err)
 		return err
 	}
 
@@ -185,6 +194,7 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 
 	// There was an error in the response?
 	if strings.HasPrefix(str, `{"error"`) {
+		fmt.Println("err prefix:", str)
 		return wtcommon.JSON2Err(str)
 
 	}
@@ -192,14 +202,18 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 	// Get transcoding
 	t, err := wtcommon.JSON2Transcoding(str)
 	if err != nil {
+		fmt.Println("err json2:", err)
 		return err
 	}
+
+	fmt.Println(".. passed decoding...")
 
 	//Update fields
 	t.Status = status
 	if status == wttypes.TRANSCODING_FINISHED && objectname != "" {
 		t.ObjectName = objectname
 	}
+	fmt.Println("[jobs] updated transcoding to:", id, status, objectname)
 
 	// Update DB
 	resp, err = resty.R().
@@ -218,6 +232,8 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 		return wtcommon.JSON2Err(str)
 
 	}
+
+	fmt.Println("[jobs] updated transcoding status")
 
 	return nil
 }

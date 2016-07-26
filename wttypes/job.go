@@ -17,3 +17,8 @@ type Job struct {
 	Transcodings []TranscodingTask `json:"transcodings"`
 	Status       string            `json:"status"`
 }
+
+type JobIDs struct {
+	ID           string            `json:"id"`
+	Transcodings []TranscodingTask `json:"transcodings"`
+}

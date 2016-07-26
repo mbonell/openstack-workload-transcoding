@@ -35,8 +35,8 @@ type insertJobRequest struct {
 }
 
 type insertJobResponse struct {
-	ID  string `json:"job_id,omitempty"`
-	Err error  `json:"error,omitempty"`
+	JobIDs wttypes.JobIDs `json:"job_ids,omitempty"`
+	Err    error          `json:"error,omitempty"`
 }
 
 func (r insertJobResponse) error() error { return r.Err }
@@ -44,8 +44,8 @@ func (r insertJobResponse) error() error { return r.Err }
 func makeInsertJobEndpoint(ds Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(insertJobRequest)
-		id, err := ds.InsertJob(req.Job)
-		return insertJobResponse{ID: id, Err: err}, nil
+		ids, err := ds.InsertJob(req.Job)
+		return insertJobResponse{JobIDs: ids, Err: err}, nil
 	}
 }
 
@@ -120,7 +120,7 @@ type getTranscodingRequest struct {
 
 type getTranscodingResponse struct {
 	Transcoding wttypes.TranscodingTask `json:"transcoding,omitempty"`
-	Err         error                      `json:"error,omitempty"`
+	Err         error                   `json:"error,omitempty"`
 }
 
 func (r getTranscodingResponse) error() error { return r.Err }

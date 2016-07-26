@@ -22,7 +22,7 @@ func MakeHandler(ctx context.Context, js Service, logger kitlog.Logger) http.Han
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"url_media":"http://obazavil-nuc/big_buck_bunny_720p_1mb.mp4", "video_name":"conejo", "transcodings":[{"profile":"iphone6"},{"profile":"ipadmini"}]}' -X POST https://localhost:8081/jobs
+	// test: curl -k -H "Content-Type: application/json" -d '{"url_media":"http://obazavil-nuc/big_buck_bunny_720p_1mb.mp4", "video_name":"conejo", "transcodings":[{"profile":"iPhone5s"},{"profile":"iPadMini4"}]}' -X POST https://localhost:8081/jobs
 	addNewJobHandler := kithttp.NewServer(
 		ctx,
 		makeAddNewJobEndpoint(js),
@@ -120,8 +120,9 @@ func decodeUpdateTranscodingStatusRequest(_ context.Context, r *http.Request) (i
 		return nil, err
 	}
 
-	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
-	//TODO: validate malformed struct
+	if body.Status == "" {
+		return nil, wttypes.ErrInvalidArgument
+	}
 
 	fmt.Println("decodeUpdateTranscodingStatusRequest:", body)
 

@@ -23,18 +23,18 @@ func JSON2Err(s string) error {
 	return errors.New(v.Error)
 }
 
-type JSONJobID struct {
-	JobID string `json:"job_id"`
+type JSONJobIDs struct {
+	JobIDs wttypes.JobIDs `json:"job_ids"`
 }
 
-func JSON2JobID(s string) (string, error) {
-	var v JSONJobID
+func JSON2JobIDs(s string) (wttypes.JobIDs, error) {
+	var v JSONJobIDs
 
 	if err := json.NewDecoder(strings.NewReader(s)).Decode(&v); err != nil {
-		return "", errors.New("Can't decode JSON: " + s)
+		return wttypes.JobIDs{}, errors.New("Can't decode JSON: " + s)
 	}
 
-	return v.JobID, nil
+	return v.JobIDs, nil
 }
 
 type JSONJob struct {

@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 
 	"golang.org/x/net/context"
 
@@ -11,6 +11,7 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 
+	"fmt"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
@@ -57,7 +58,7 @@ func MakeHandler(ctx context.Context, tms Service, logger kitlog.Logger) http.Ha
 		opts...,
 	)
 
-	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running"}' -X PUT https://localhost:8082/transcodings/1/status
+	// test: curl -k -H "Content-Type: application/json" -d '{"status":"running"}' -X PUT https://localhost:8082/tasks/1/status
 	updateTaskStatusHandler := kithttp.NewServer(
 		ctx,
 		makeUpdateTaskStatusEndpoint(tms),
@@ -85,13 +86,16 @@ func decodeAddTranscodingRequest(_ context.Context, r *http.Request) (interface{
 		return nil, err
 	}
 
-	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
-	//TODO: validate ID is empty
+	fmt.Println("[manager] decodeAddTranscodingRequest:", t)
+
+	if t.ID == "" || t.ObjectName == "" || t.Profile == "" {
+		return nil, wttypes.ErrInvalidArgument
+	}
 
 	return addTranscodingRequest{
-		ID: t.ID,
+		ID:         t.ID,
 		ObjectName: t.ObjectName,
-		Profile: t.Profile,
+		Profile:    t.Profile,
 	}, nil
 }
 
@@ -118,7 +122,7 @@ func decodeGetTotalTasksRunningRequest(_ context.Context, r *http.Request) (inte
 
 func decodeUpdateTaskStatusRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var body struct {
-		Status     string `json:"status"`
+		Status string `json:"status"`
 	}
 
 	vars := mux.Vars(r)
@@ -132,13 +136,9 @@ func decodeUpdateTaskStatusRequest(_ context.Context, r *http.Request) (interfac
 		return nil, err
 	}
 
-	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
-	//TODO: validate malformed struct
 
 	return updateTaskStatusRequest{ID: id, Status: body.Status}, nil
 }
-
-
 
 type errorer interface {
 	error() error
@@ -170,4 +170,3 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		"error": err.Error(),
 	})
 }
-

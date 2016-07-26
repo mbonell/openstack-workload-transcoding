@@ -1,12 +1,13 @@
 package database
 
 import (
-	"time"
 	"errors"
+	"time"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	"fmt"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
@@ -28,8 +29,8 @@ type JobDB struct {
 }
 
 type TranscodingProfileDB struct {
-	ID         bson.ObjectId `bson:"_id,omitempty"`
-	JobID      bson.ObjectId `bson:"job_id,omitempty"`
+	ID         bson.ObjectId `bson:"_id"`
+	JobID      string        `bson:"job_id"`
 	Profile    string        `bson:"profile"`
 	ObjectName string        `bson:"object_name"`
 	Added      time.Time     `bson:"added"`
@@ -119,6 +120,18 @@ func CreateMongoSession() (*mgo.Session, error) {
 		return nil, err
 	}
 
+	idxJobStatus := mgo.Index{
+		Key:        []string{"job_id", "status"},
+		Unique:     false,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxJobStatus)
+	if err != nil {
+		return nil, err
+	}
+
 	return session, nil
 }
 
@@ -172,7 +185,7 @@ func (ds *DataStore) ListJobs() ([]wttypes.Job, error) {
 	return jobs, nil
 }
 
-func (ds *DataStore) InsertJob(job wttypes.Job) (string, error) {
+func (ds *DataStore) InsertJob(job wttypes.Job) (wttypes.JobIDs, error) {
 	jid := bson.NewObjectId()
 
 	// Create JobDB object
@@ -191,7 +204,11 @@ func (ds *DataStore) InsertJob(job wttypes.Job) (string, error) {
 	// Insert Job
 	err := c.Insert(&j)
 	if err != nil {
-		return "", err
+		return wttypes.JobIDs{}, err
+	}
+
+	ids := wttypes.JobIDs{
+		ID: jid.Hex(),
 	}
 
 	// Get "transcodings" collection
@@ -207,23 +224,32 @@ func (ds *DataStore) InsertJob(job wttypes.Job) (string, error) {
 			tstatus = wttypes.TRANSCODING_SKIPPED
 		}
 
+		tid := bson.NewObjectId()
 		t := TranscodingProfileDB{
-			ID:         bson.NewObjectId(),
-			JobID:      jid,
+			ID:         tid,
+			JobID:      jid.Hex(),
 			Profile:    v.Profile,
 			ObjectName: v.ObjectName,
 			Added:      time.Now(),
 			Status:     tstatus,
 		}
 
+		tt := wttypes.TranscodingTask{
+			ID:      tid.Hex(),
+			Profile: v.Profile,
+		}
+
 		// Insert Transcoding
 		err := c.Insert(&t)
 		if err != nil {
-			return "", err
+			return wttypes.JobIDs{}, err
 		}
+
+		ids.Transcodings = append(ids.Transcodings, tt)
 	}
 
-	return jid.Hex(), nil
+	fmt.Println("[database] ids on insert:", ids)
+	return ids, nil
 }
 
 func (ds *DataStore) GetJob(id string) (wttypes.Job, error) {
@@ -297,12 +323,11 @@ func (ds *DataStore) GetTranscoding(id string) (wttypes.TranscodingTask, error) 
 	}
 
 	t := wttypes.TranscodingTask{
-		ID: result.ID.Hex(),
-		Profile: result.Profile,
+		ID:         result.ID.Hex(),
+		Profile:    result.Profile,
 		ObjectName: result.ObjectName,
-		Status: result.Status,
+		Status:     result.Status,
 	}
-
 
 	return t, nil
 }
@@ -325,6 +350,18 @@ func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingTask) error {
 		return err
 	}
 
+	// Update Started if needed
+	started := oldt.Started
+	if t.Status == wttypes.TRANSCODING_RUNNING && oldt.Status == wttypes.TRANSCODING_QUEUED {
+		started = time.Now()
+	}
+
+	// Update Ended if needed
+	ended := oldt.Ended
+	if t.Status == wttypes.TRANSCODING_FINISHED && oldt.Status == wttypes.TRANSCODING_RUNNING {
+		ended = time.Now()
+	}
+
 	// Update document
 	newt := TranscodingProfileDB{
 		ID: tid,
@@ -332,11 +369,11 @@ func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingTask) error {
 		Profile:    t.Profile,
 		ObjectName: t.ObjectName,
 		Status:     t.Status,
+		Started:    started,
+		Ended:      ended,
 
-		JobID:   oldt.JobID,
-		Added:   oldt.Added,
-		Started: oldt.Started,
-		Ended:   oldt.Ended,
+		JobID: oldt.JobID,
+		Added: oldt.Added,
 	}
 
 	// Update in DB
@@ -345,7 +382,39 @@ func (ds *DataStore) UpdateTranscoding(t wttypes.TranscodingTask) error {
 		return err
 	}
 
+	// Look for pending transcodings of same job
+	jid := bson.ObjectIdHex(oldt.JobID)
+
+	var results []struct {
+		Status string `bson:"status"`
+	}
+	condStatus := bson.M{"$in": []string{wttypes.TRANSCODING_QUEUED, wttypes.TRANSCODING_RUNNING}}
+	err = c.Find(bson.M{"job_id": jid.Hex(), "status": condStatus}).Select(bson.M{"status": 1}).All(&results)
+	if err != nil {
+		return err
+	}
+
+	// Update job in case no more pending transcodings...
+	if len(results) == 0 {
+		fmt.Println("job finished!! let's update it on DB:", jid.Hex())
+		// Get "jobs" collection
+		c = ds.session.DB(MongoDB).C(MongoJobsCollection)
+
+		job := JobDB{}
+		err := c.FindId(jid).One(&job)
+		if err != nil {
+			return err
+		}
+
+		job.Status = wttypes.JOB_FINISHED
+		job.Ended = time.Now()
+
+		// Update in DB
+		_, err = c.UpsertId(jid, job)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
-
-
