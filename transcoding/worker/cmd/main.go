@@ -143,7 +143,7 @@ func main() {
 
 	go func() {
 		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServeTLS(*httpAddr, "../../certs/server.pem", "../../certs/server.key", nil)
+		errs <- http.ListenAndServeTLS(*httpAddr, "../../../certs/server.pem", "../../../certs/server.key", nil)
 	}()
 	go func() {
 		c := make(chan os.Signal)
