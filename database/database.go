@@ -12,9 +12,11 @@ import (
 )
 
 const (
-	MongoDB                     = "transcoding"
-	MongoJobsCollection         = "jobs"
-	MongoTranscodingsCollection = "transcodings"
+	MongoDB                      = "transcoding"
+	MongoJobsCollection          = "jobs"
+	MongoTranscodingsCollection  = "transcodings"
+	MongoWorkersEventsCollection = "metrics_workers_events"
+	MongoWorkersCollection       = "workers"
 )
 
 type JobDB struct {
@@ -37,6 +39,19 @@ type TranscodingProfileDB struct {
 	Started    time.Time     `bson:"started"`
 	Ended      time.Time     `bson:"ended"`
 	Status     string        `bson:"status"`
+}
+
+type WorkerEventDB struct {
+	Timestamp time.Time `bson:"timestamp"`
+	Time      string    `bson:"time"`
+	Addr      string    `bson:"addr"`
+	Event     string    `bson:"event"`
+}
+
+type WorkerDB struct {
+	Addr        string    `bson:"addr"`
+	LastUpdated time.Time `bson:"last_updated"`
+	Status      string    `bson:"status"`
 }
 
 type DataStore struct {
@@ -128,6 +143,74 @@ func CreateMongoSession() (*mgo.Session, error) {
 		Sparse:     true,
 	}
 	err = c.EnsureIndex(idxJobStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get "events" collection
+	c = session.DB(MongoDB).C(MongoWorkersEventsCollection)
+
+	// Indexes
+	idxEvent := mgo.Index{
+		Key:        []string{"event"},
+		Unique:     false,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxEvent)
+	if err != nil {
+		return nil, err
+	}
+
+	idxEventTime := mgo.Index{
+		Key:        []string{"event", "hour", "minute"},
+		Unique:     false,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxEventTime)
+	if err != nil {
+		return nil, err
+	}
+
+	idxEventHour := mgo.Index{
+		Key:        []string{"event", "hour"},
+		Unique:     false,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxEventHour)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get "workers" collection
+	c = session.DB(MongoDB).C(MongoWorkersCollection)
+
+	// Indexes
+	idxWorkerAddr := mgo.Index{
+		Key:        []string{"addr"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxWorkerAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	idxWorkerStatus := mgo.Index{
+		Key:        []string{"status"},
+		Unique:     false,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(idxWorkerStatus)
 	if err != nil {
 		return nil, err
 	}
@@ -468,13 +551,13 @@ func (ds *DataStore) UpdateJob(job wttypes.Job) error {
 		ID: jid,
 
 		Started: started,
-		Ended: ended,
-		Status: job.Status,
+		Ended:   ended,
+		Status:  job.Status,
 
-		URLMedia: oldj.URLMedia,
-		VideoName: oldj.VideoName,
+		URLMedia:   oldj.URLMedia,
+		VideoName:  oldj.VideoName,
 		ObjectName: oldj.ObjectName,
-		Added: oldj.Added,
+		Added:      oldj.Added,
 	}
 
 	// Update in DB
@@ -484,4 +567,49 @@ func (ds *DataStore) UpdateJob(job wttypes.Job) error {
 	}
 
 	return nil
+}
+
+func (ds *DataStore) AddWorkerEvent(addr string, event string) error {
+	fmt.Println("AddWorkerEvent:", event)
+	// Get "events" collection
+	c := ds.session.DB(MongoDB).C(MongoWorkersEventsCollection)
+
+	t := time.Now()
+
+	e := WorkerEventDB{
+		Timestamp: t,
+		Time:      fmt.Sprintf("%02d%02d", t.Hour(), t.Minute()),
+		Addr:      addr,
+		Event:     event,
+	}
+
+	// Insert Event
+	err := c.Insert(&e)
+
+	return err
+}
+
+func (ds *DataStore) UpdateWorkerStatus(addr string, status string) error {
+	fmt.Println("UpdateWorkerStatus:", addr, status)
+
+	// Get "workers" collection
+	c := ds.session.DB(MongoDB).C(MongoWorkersCollection)
+
+	w := WorkerDB{
+		Addr:        addr,
+		LastUpdated: time.Now(),
+		Status:      status,
+	}
+
+	// Update/Insert in DB
+	_, err := c.Upsert(bson.M{"addr": addr}, w)
+	if err != nil {
+		return err
+	}
+
+	err = ds.AddWorkerEvent(addr, status)
+
+
+
+	return err
 }

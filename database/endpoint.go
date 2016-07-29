@@ -56,7 +56,7 @@ type updateJobRequest struct {
 }
 
 type updateJobResponse struct {
-	Err error	`json:"error,omitempty"`
+	Err error `json:"error,omitempty"`
 }
 
 func (r updateJobResponse) error() error { return r.Err }
@@ -131,5 +131,26 @@ func makeGetTranscodingEndpoint(ds Service) endpoint.Endpoint {
 		t, err := ds.GetTranscoding(req.ID)
 
 		return getTranscodingResponse{Transcoding: t, Err: err}, nil
+	}
+}
+
+// UpdateWorkerStatus
+
+type updateWorkerStatusRequest struct {
+	WS wttypes.WorkerStatus
+}
+
+type updateWorkerStatusResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func (r updateWorkerStatusResponse) error() error { return r.Err }
+
+func makeUpdateWorkerStatusEndpoint(ds Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(updateWorkerStatusRequest)
+		err := ds.UpdateWorkerStatus(req.WS.Addr, req.WS.Status)
+
+		return updateWorkerStatusResponse{Err: err}, nil
 	}
 }

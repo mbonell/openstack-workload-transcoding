@@ -104,7 +104,8 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 
 func (s *service) GetJobStatus(jobID string) (string, error) {
 	// Ask DB to get job from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
+	resp, err := resty.R().
+		Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {
@@ -130,7 +131,8 @@ func (s *service) GetJobStatus(jobID string) (string, error) {
 
 func (s *service) CancelJob(jobID string) error {
 	// Ask DB to get job from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
+	resp, err := resty.R().
+		Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {
@@ -161,13 +163,13 @@ func (s *service) CancelJob(jobID string) error {
 	// First, let's cancel all pending transcodings
 	for _, v := range job.Transcodings {
 		//Update in DB
-		err:= s.UpdateTranscodingStatus(v.ID, wttypes.TRANSCODING_CANCELLED, "")
+		err := s.UpdateTranscodingStatus(v.ID, wttypes.TRANSCODING_CANCELLED, "")
 		if err != nil {
 			return err
 		}
 
 		// Ask manager to cancel transcodings
-		fmt.Println("asking manager to cancel URL:", wtcommon.Servers["manager"] + "/tasks/" + v.ID)
+		fmt.Println("asking manager to cancel URL:", wtcommon.Servers["manager"]+"/tasks/"+v.ID)
 		if v.Status == wttypes.TRANSCODING_QUEUED || v.Status == wttypes.TRANSCODING_RUNNING {
 			resp, err := resty.R().
 				Delete(wtcommon.Servers["manager"] + "/tasks/" + v.ID)
@@ -213,7 +215,8 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 	fmt.Println("[jobs] received update status request:", id, status, objectname)
 
 	// Ask DB to get transcoding from DB
-	resp, err := resty.R().Get(wtcommon.Servers["database"] + "/transcodings/" + id)
+	resp, err := resty.R().
+		Get(wtcommon.Servers["database"] + "/transcodings/" + id)
 
 	// Error in communication
 	if err != nil {

@@ -1,8 +1,8 @@
 package database
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 
 	"golang.org/x/net/context"
 
@@ -11,6 +11,7 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 
+	"fmt"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
@@ -75,6 +76,15 @@ func MakeHandler(ctx context.Context, ds Service, logger kitlog.Logger) http.Han
 		opts...,
 	)
 
+	// test: curl -k -H "Content-Type: application/json" -d '{"addr":"myip", "status":"online"}' -X PUT https://localhost:8080/workers/status
+	updateWorkerStatusHandler := kithttp.NewServer(
+		ctx,
+		makeUpdateWorkerStatusEndpoint(ds),
+		decodeUpdateWorkerStatusRequest,
+		encodeResponse,
+		opts...,
+	)
+
 	r := mux.NewRouter()
 
 	r.Handle("/jobs", insertJobHandler).Methods("POST")
@@ -84,6 +94,8 @@ func MakeHandler(ctx context.Context, ds Service, logger kitlog.Logger) http.Han
 
 	r.Handle("/transcodings/{id}", getTranscodingHandler).Methods("GET")
 	r.Handle("/transcodings/{id}", updateTranscodingHandler).Methods("PUT")
+
+	r.Handle("/workers/status", updateWorkerStatusHandler).Methods("PUT")
 
 	return r
 
@@ -103,7 +115,7 @@ func decodeInsertJobRequest(_ context.Context, r *http.Request) (interface{}, er
 	//TODO: Decode not always throws error, extra validate all needed fields "decoded:  {    [] }"
 	//TODO: validate ID is empty
 
-	return insertJobRequest{Job:job}, nil
+	return insertJobRequest{Job: job}, nil
 }
 
 func decodeGetJobRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -134,7 +146,7 @@ func decodeUpdateJobRequest(_ context.Context, r *http.Request) (interface{}, er
 		return nil, wttypes.ErrMismatchID
 	}
 
-	return updateJobRequest{Job:job}, nil
+	return updateJobRequest{Job: job}, nil
 }
 
 func decodeGetTranscodingRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -165,9 +177,26 @@ func decodeUpdateTranscodingRequest(_ context.Context, r *http.Request) (interfa
 		return nil, wttypes.ErrMismatchID
 	}
 
-	return updateTranscodingRequest{Transcoding:t}, nil
+	return updateTranscodingRequest{Transcoding: t}, nil
 }
 
+func decodeUpdateWorkerStatusRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var ws wttypes.WorkerStatus
+
+	if err := json.NewDecoder(r.Body).Decode(&ws); err != nil {
+		return nil, err
+	}
+
+	fmt.Println("decodeUpdateWorkerStatusRequest:", ws)
+
+	if ws.Addr == "" || ws.Status == "" {
+		return nil, wttypes.ErrInvalidArgument
+	}
+
+	return updateWorkerStatusRequest{
+		WS: ws,
+	}, nil
+}
 
 type errorer interface {
 	error() error

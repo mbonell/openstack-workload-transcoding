@@ -12,17 +12,15 @@ import (
 
 	"github.com/go-kit/kit/log"
 
-	"github.com/obazavil/openstack-workload-transcoding/database"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
+	"github.com/obazavil/openstack-workload-transcoding/transcoding/monitor"
 )
 
 func main() {
-	var err error
-
 	errs := make(chan error, 2)
 
 	var (
-		httpAddr = flag.String("http.addr", ":8080", "Address for HTTP (JSON) database server")
+		httpAddr = flag.String("http.addr", ":8084", "Address for HTTP (JSON) transcoding monitor server")
 	)
 	flag.Parse()
 
@@ -38,25 +36,22 @@ func main() {
 		ctx = context.Background()
 	}
 
-	var ds database.Service
+	var tms monitor.Service
 	{
-		ds, err  = database.NewService()
-		if err != nil {
-			errs <- err
-		}
+		tms = monitor.NewService()
 	}
 
 	httpLogger := log.NewContext(logger).With("component", "http")
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/", database.MakeHandler(ctx, ds, httpLogger))
+	mux.Handle("/", monitor.MakeHandler(ctx, tms, httpLogger))
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 
 	go func() {
 		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServeTLS(*httpAddr, "../../certs/server.pem", "../../certs/server.key", nil)
+		errs <- http.ListenAndServeTLS(*httpAddr, "../../../certs/server.pem", "../../../certs/server.key", nil)
 	}()
 	go func() {
 		c := make(chan os.Signal)

@@ -9,6 +9,7 @@ var Servers = map[string]string{
 	"jobs":     "https://localhost:8081",
 	"manager":  "https://localhost:8082",
 	"worker":   "https://localhost:8083",
+	"monitor":  "https://localhost:8084",
 }
 
 // AccessControl returns a handler for the access control

@@ -25,11 +25,14 @@ type Service interface {
 	// List all jobs in DB
 	ListJobs() ([]wttypes.Job, error)
 
-	//Update a transcoding in DB
+	// Update a transcoding in DB
 	UpdateTranscoding(t wttypes.TranscodingTask) error
 
-	//Get a transcoding from DB
+	// Get a transcoding from DB
 	GetTranscoding(id string) (wttypes.TranscodingTask, error)
+
+	// Update Worker status into DB (and add to events for metrics)
+	UpdateWorkerStatus(addr string, status string) error
 }
 
 type service struct {
@@ -90,7 +93,15 @@ func (s *service) GetTranscoding(id string) (wttypes.TranscodingTask, error) {
 	t, err := datastore.GetTranscoding(id)
 
 	return t, err
+}
 
+func (s *service) UpdateWorkerStatus(addr string, status string) error {
+	datastore := NewDataStore(s.session)
+	defer datastore.Close()
+
+	err := datastore.UpdateWorkerStatus(addr, status)
+
+	return err
 }
 
 
