@@ -2,7 +2,6 @@ package database
 
 import (
 	"golang.org/x/net/context"
-
 	"github.com/go-kit/kit/endpoint"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"

@@ -4,13 +4,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-resty/resty"
-
 	"gopkg.in/mgo.v2"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"strings"
 )
 
 // Service is the interface that provides transcoding manager methods.

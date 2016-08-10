@@ -3,15 +3,14 @@ package database
 import (
 	"encoding/json"
 	"net/http"
+	"fmt"
 
 	"golang.org/x/net/context"
-
 	"github.com/gorilla/mux"
 
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 
-	"fmt"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 

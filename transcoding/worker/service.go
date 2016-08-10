@@ -5,14 +5,13 @@ import (
 	"os"
 	"sync"
 	"syscall"
-
-	"github.com/go-resty/resty"
-
 	"fmt"
-	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
-	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 	"net"
 	"strings"
+	"github.com/go-resty/resty"
+
+	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
+	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
 // Service is the interface that provides transcoding worker methods.

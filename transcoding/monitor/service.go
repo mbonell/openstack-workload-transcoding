@@ -2,12 +2,13 @@ package monitor
 
 import (
 	"crypto/tls"
-
 	"fmt"
+	"strings"
+
 	"github.com/go-resty/resty"
+
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"strings"
 )
 
 // Service is the interface that provides transcoding monitor methods.
