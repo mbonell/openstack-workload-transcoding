@@ -2,12 +2,11 @@ package manager
 
 import (
 	"time"
-
+	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"fmt"
 )
 
 const (

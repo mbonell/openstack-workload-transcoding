@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 
 	"github.com/go-resty/resty"
-
 	"gopkg.in/mgo.v2"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"

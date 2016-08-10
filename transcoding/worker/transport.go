@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"golang.org/x/net/context"
-
 	"github.com/gorilla/mux"
 
 	kitlog "github.com/go-kit/kit/log"

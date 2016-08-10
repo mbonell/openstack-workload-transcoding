@@ -2,7 +2,6 @@ package worker
 
 import (
 	"golang.org/x/net/context"
-
 	"github.com/go-kit/kit/endpoint"
 )
 

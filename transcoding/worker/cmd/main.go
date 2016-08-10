@@ -8,19 +8,17 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"os/exec"
+	"path"
+	"strings"
 
 	"golang.org/x/net/context"
-
 	"github.com/go-resty/resty"
-
 	"github.com/go-kit/kit/log"
 
 	"github.com/obazavil/openstack-workload-transcoding/transcoding/worker"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-	"os/exec"
-	"path"
-	"strings"
 )
 
 const (
@@ -69,7 +67,7 @@ func main() {
 
 	go func() {
 		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServeTLS(*httpAddr, "../../../certs/server.pem", "../../../certs/server.key", nil)
+		errs <- http.ListenAndServeTLS(*httpAddr, "certs/server.pem", "certs/server.key", nil)
 	}()
 	go func() {
 		c := make(chan os.Signal)
@@ -126,16 +124,17 @@ func main() {
 			tws.WorkerUpdateStatus(wttypes.WORKER_STATUS_IDLE)
 			tws.NotifyTaskStatus(task.ID, wttypes.TRANSCODING_RUNNING, "")
 
-			// Filenames of our media
+			// Names and paths of our media
 			fnOriginal := path.Join(os.TempDir(),
 				fmt.Sprintf("%s.mp4",
 					task.ObjectName,
 				))
-			fnTranscoded := path.Join(os.TempDir(),
-				fmt.Sprintf("%s-%s.mp4",
-					task.ObjectName,
-					task.Profile,
-				))
+
+			vnTranscoded := fmt.Sprintf("%s-%s.mp4",
+						task.ObjectName,
+						task.Profile,
+				)
+			fnTranscoded := path.Join(os.TempDir(), vnTranscoded)
 
 			// Download media from object storage
 			err = wtcommon.DownloadFromObjectStorage(serviceObjectStorage, task.ObjectName, fnOriginal)
@@ -213,7 +212,7 @@ func main() {
 
 			var objectname string
 			if status == wttypes.TRANSCODING_FINISHED {
-				objectname, err = wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, fnTranscoded)
+				objectname, err = wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, vnTranscoded)
 				if err != nil {
 					fmt.Printf("[err] object storage: %s.\n",
 						err)

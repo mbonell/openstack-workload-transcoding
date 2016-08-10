@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"golang.org/x/net/context"
-
 	"github.com/go-kit/kit/log"
 
 	"github.com/obazavil/openstack-workload-transcoding/database"
@@ -56,7 +55,7 @@ func main() {
 
 	go func() {
 		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServeTLS(*httpAddr, "../../certs/server.pem", "../../certs/server.key", nil)
+		errs <- http.ListenAndServeTLS(*httpAddr, "certs/server.pem", "certs/server.key", nil)
 	}()
 	go func() {
 		c := make(chan os.Signal)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"encoding/json"
+
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
