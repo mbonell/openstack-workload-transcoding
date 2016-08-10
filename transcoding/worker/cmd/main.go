@@ -124,16 +124,17 @@ func main() {
 			tws.WorkerUpdateStatus(wttypes.WORKER_STATUS_IDLE)
 			tws.NotifyTaskStatus(task.ID, wttypes.TRANSCODING_RUNNING, "")
 
-			// Filenames of our media
+			// Names and paths of our media
 			fnOriginal := path.Join(os.TempDir(),
 				fmt.Sprintf("%s.mp4",
 					task.ObjectName,
 				))
-			fnTranscoded := path.Join(os.TempDir(),
-				fmt.Sprintf("%s-%s.mp4",
-					task.ObjectName,
-					task.Profile,
-				))
+
+			vnTranscoded := fmt.Sprintf("%s-%s.mp4",
+						task.ObjectName,
+						task.Profile,
+				)
+			fnTranscoded := path.Join(os.TempDir(), vnTranscoded)
 
 			// Download media from object storage
 			err = wtcommon.DownloadFromObjectStorage(serviceObjectStorage, task.ObjectName, fnOriginal)
@@ -211,7 +212,7 @@ func main() {
 
 			var objectname string
 			if status == wttypes.TRANSCODING_FINISHED {
-				objectname, err = wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, fnTranscoded)
+				objectname, err = wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, vnTranscoded)
 				if err != nil {
 					fmt.Printf("[err] object storage: %s.\n",
 						err)
