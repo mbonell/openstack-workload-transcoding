@@ -22,12 +22,11 @@ cd $GOPATH/src
 go get github.com/go-kit/kit/log
 go get golang.org/x/net/context
 go get github.com/go-resty/resty
-go get gopkg.in/mgo.v2
 go get github.com/gorilla/mux
 go get github.com/rackspace/gophercloud
 
-# Downloading the code application and running the manager microservice
+# Downloading the code application and running the monitor microservice
 mkdir -p $APP_DIR
 git clone $REPOSITORY_URL $APP_DIR
 cd $APP_DIR
-go run transcoding/manager/cmd/main.go
+go run transcoding/monitor/cmd/main.go
