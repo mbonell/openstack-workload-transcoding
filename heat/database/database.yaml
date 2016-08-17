@@ -1,0 +1,67 @@
+heat_template_version: 2015-10-15
+
+description: >
+  Video Transcoding Workload: Database microservice HOT template. This template launches the database microservice
+  installing GoLang, the GoLang libraries requiered by the application and MongoDB. The microservice uses a volumen to
+  store all the database data.
+
+parameters:
+  key_name:
+    type: string
+    label: Key pair name
+    description: Name of an existing key pair to use for the server
+    default: transcoding_key
+    constraints:
+      - custom_constraint: nova.keypair
+        description: Must name a public key (pair) known to Nova
+  flavor:
+    type: string
+    label: Flavor ID
+    description: Flavor ID for the server to be created
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+        description: Must be a flavor known to Nova
+  image:
+    type: string
+    label: Image ID
+    description: Image ID or image name to use for the server
+    default: ubuntu-server-14.04
+    constraints:
+      - custom_constraint: glance.image
+        description: Must identify an image known to Glance
+  private_network:
+    type: string
+    label: Private network ID
+    description: Private network ID for the server
+
+resources:
+  segurity_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: database
+      description: Security group for the database server
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 8080
+          port_range_max: 8080
+  database_server:
+    type: OS::Nova::Server
+    properties:
+      key_name: { get_param: key_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks:
+        - network: { get_param: private_network }
+      security_groups:
+        - { get_resource: segurity_group}
+
+outputs:
+  instance_ip:
+    description: IP address of the deployed database instance
+    value: { get_attr: [database_server, first_address] }
