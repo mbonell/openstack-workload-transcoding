@@ -1,7 +1,7 @@
 heat_template_version: 2015-10-15
 
 description: >
-  Video Transcoding Workload: Manager HOT template. This template launches the manager microservice
+  Video Transcoding Workload: Monitor HOT template. This template launches the monitor microservice
   installing GoLang and the GoLang libraries requiered by the application.
 
 parameters:
@@ -38,8 +38,8 @@ resources:
   segurity_group:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: manager
-      description: Security group for the manager server
+      name: monitor
+      description: Security group for the monitor server
       rules:
         - protocol: tcp
           remote_ip_prefix: 0.0.0.0/0
@@ -47,9 +47,9 @@ resources:
           port_range_max: 22
         - protocol: tcp
           remote_ip_prefix: 0.0.0.0/0
-          port_range_min: 8082
-          port_range_max: 8082
-  manager:
+          port_range_min: 8084
+          port_range_max: 8084
+  monitor:
     type: OS::Nova::Server
     properties:
       key_name: { get_param: key_name }
@@ -64,5 +64,5 @@ resources:
 
 outputs:
   instance_ip:
-    description: IP address of the deployed manager microservice
-    value: { get_attr: [manager, first_address] }
+    description: IP address of the deployed monitor microservice
+    value: { get_attr: [monitor, first_address] }
