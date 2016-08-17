@@ -66,4 +66,3 @@ outputs:
   instance_ip:
     description: IP address of the deployed manager microservice
     value: { get_attr: [manager, first_address] }
-    value: { get_attr: [manager, first_address] }
