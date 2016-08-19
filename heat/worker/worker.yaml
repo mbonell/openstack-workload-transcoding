@@ -1,0 +1,96 @@
+heat_template_version: 2015-10-15
+
+description: >
+  Video Transcoding Workload: Worker HOT template. This template launches the worker microservice
+  installing GoLang and the GoLang libraries requiered by the application, ffmpeg and setting the
+  enviroment variables for the cloud.
+
+parameters:
+  key_name:
+    type: string
+    label: Key pair name
+    description: Name of an existing key pair to use for the server
+    default: transcoding_key
+    constraints:
+      - custom_constraint: nova.keypair
+        description: Must name a public key (pair) known to Nova
+  flavor:
+    type: string
+    label: Flavor ID
+    description: Flavor ID for the server to be created
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+        description: Must be a flavor known to Nova
+  image:
+    type: string
+    label: Image ID
+    description: Image ID or image name to use for the server
+    default: ubuntu-server-14.04
+    constraints:
+      - custom_constraint: glance.image
+        description: Must identify an image known to Glance
+  private_network:
+    type: string
+    label: Private network ID
+    description: Private network ID for the server
+  os_auth_url:
+    type: string
+    label: OS_AUTH_URL
+    description: OS_AUTH_URL environment variable
+  os_username:
+    type: string
+    label: OS_USERNAME
+    description: OS_USERNAME environment variable
+  os_project_name:
+    type: string
+    label: OS_PROJECT_NAME
+    description: OS_PROJECT_NAME environment variable
+  os_password:
+    type: string
+    label: OS_PASSWORD
+    description: OS_PASSWORD environment variable
+  os_domain_id:
+    type: string
+    label: OS_DOMAIN_ID
+    description: OS_DOMAIN_ID environment variable
+
+resources:
+  segurity_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: worker
+      description: Security group for the worker server
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 8083
+          port_range_max: 8083
+  worker:
+    type: OS::Nova::Server
+    properties:
+      key_name: { get_param: key_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks:
+        - network: { get_param: private_network }
+      security_groups:
+        - { get_resource: segurity_group }
+      user_data:
+        str_replace:
+          template: { get_file: init.sh }
+          params:
+            $OS_AUTH_URL: { get_param: os_auth_url}
+            $OS_USERNAME: { get_param: os_username}
+            $OS_PROJECT_NAME: { get_param: os_project_name}
+            $OS_PASSWORD: { get_param: os_password}
+            $OS_DOMAIN_ID: { get_param: os_domain_id}
+
+outputs:
+  instance_ip:
+    description: IP address of the deployed worker microservice
+    value: { get_attr: [worker, first_address] }
