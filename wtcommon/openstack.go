@@ -17,8 +17,11 @@ import (
 	"github.com/rackspace/gophercloud/openstack/objectstorage/v1/objects"
 )
 
-// containerName is the constant with the name of the container for jobs
-const containerName = "media-transcoding"
+// constants with the name of the containers for jobs
+const (
+	SOURCE_MEDIA_CONTAINER = "media-source"
+	TRANSCODED_MEDIA_CONTAINER = "media-transcoding"
+)
 
 // getProvider returns the provider
 func GetProvider()  (*gophercloud.ProviderClient, error) {
@@ -77,7 +80,7 @@ func downloadFile(url string) (string, error) {
 }
 
 // Upload2ObjectStorage uploads the media (url or file) into object storage
-func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, filename string) (string, error) {
+func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, filename string, containerName string) (string, error) {
 	var fn string
 
 	// If is a URL let's download it
@@ -128,7 +131,7 @@ func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, 
 
 func DownloadFromObjectStorage(service *gophercloud.ServiceClient, objectName, filename string) error {
 	// Save object
-	res := objects.Download(service, containerName, objectName, nil)
+	res := objects.Download(service, SOURCE_MEDIA_CONTAINER, objectName, nil)
 	content, err := res.ExtractContent()
 
 	err = ioutil.WriteFile(filename, []byte(content), 0644)

@@ -212,7 +212,7 @@ func main() {
 
 			var objectname string
 			if status == wttypes.TRANSCODING_FINISHED {
-				objectname, err = wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, vnTranscoded)
+				objectname, err = wtcommon.Upload2ObjectStorage(serviceObjectStorage, fnTranscoded, vnTranscoded, wtcommon.TRANSCODED_MEDIA_CONTAINER)
 				if err != nil {
 					fmt.Printf("[err] object storage: %s.\n",
 						err)
