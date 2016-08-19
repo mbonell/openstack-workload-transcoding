@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty"
-
 	"github.com/rackspace/gophercloud"
 
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
@@ -41,7 +40,7 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 	}
 
 	//First let's upload to Object Storage
-	objectname, errOS := wtcommon.Upload2ObjectStorage(s.serviceObjectStorage, job.URLMedia, job.VideoName)
+	objectname, errOS := wtcommon.Upload2ObjectStorage(s.serviceObjectStorage, job.URLMedia, job.VideoName, wtcommon.SOURCE_MEDIA_CONTAINER)
 	if errOS == nil {
 		job.ObjectName = objectname
 		job.Status = wttypes.JOB_QUEUED

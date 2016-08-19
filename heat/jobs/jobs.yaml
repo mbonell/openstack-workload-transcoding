@@ -2,7 +2,7 @@ heat_template_version: 2015-10-15
 
 description: >
   Video Transcoding Workload: Jobs HOT template. This template launches the jobs microservice
-  installing GoLang and the GoLang libraries requiered by the application, creating the Swift container
+  installing GoLang and the GoLang libraries requiered by the application, creating the Swift containers
   for the media and setting the enviroment variables for the cloud.
 
 parameters:
@@ -89,10 +89,15 @@ resources:
             $OS_PROJECT_NAME: { get_param: os_project_name}
             $OS_PASSWORD: { get_param: os_password}
             $OS_DOMAIN_ID: { get_param: os_domain_id}
-  media_container:
+  source_media_container:
+    type: OS::Swift::Container
+    properties:
+      name: media-source
+  transcoded_media_container:
     type: OS::Swift::Container
     properties:
       name: media-transcoding
+
 
 outputs:
   instance_ip:
