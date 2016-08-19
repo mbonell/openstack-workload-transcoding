@@ -32,6 +32,7 @@ go get github.com/go-kit/kit/log
 go get golang.org/x/net/context
 go get github.com/go-resty/resty
 go get github.com/gorilla/mux
+go get github.com/rackspace/gophercloud
 
 # Downloading the code application and running the jobs microservice
 mkdir -p $APP_DIR
