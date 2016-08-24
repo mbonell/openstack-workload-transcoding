@@ -56,7 +56,7 @@ parameters:
     description: OS_DOMAIN_ID environment variable
 
 resources:
-  segurity_group:
+  security_group:
     type: OS::Neutron::SecurityGroup
     properties:
       name: worker
@@ -79,7 +79,7 @@ resources:
       networks:
         - network: { get_param: private_network }
       security_groups:
-        - { get_resource: segurity_group }
+        - { get_resource: security_group }
       user_data:
         str_replace:
           template: { get_file: init.sh }

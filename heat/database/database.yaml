@@ -1,7 +1,7 @@
 heat_template_version: 2015-10-15
 
 description: >
-  Video Transcoding Workload: Database microservice HOT template. This template launches the database microservice
+  Video Transcoding Workload: Database HOT template. This template launches the database microservice
   installing GoLang, the GoLang libraries requiered by the application and MongoDB. The microservice uses a volumen to
   store all the database data.
 
@@ -34,9 +34,14 @@ parameters:
     type: string
     label: Private network ID
     description: Private network ID for the server
+  volumen_size:
+    type: number
+    label: Size (GB)
+    description: The size of the volume (GB)
+    default: 1
 
 resources:
-  segurity_group:
+  security_group:
     type: OS::Neutron::SecurityGroup
     properties:
       name: database
@@ -50,7 +55,7 @@ resources:
           remote_ip_prefix: 0.0.0.0/0
           port_range_min: 8080
           port_range_max: 8080
-  database_server:
+  database:
     type: OS::Nova::Server
     properties:
       key_name: { get_param: key_name }
@@ -59,9 +64,21 @@ resources:
       networks:
         - network: { get_param: private_network }
       security_groups:
-        - { get_resource: segurity_group}
+        - { get_resource: security_group }
+      user_data:
+        get_file: init.sh
+  database_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volumen_size }
+  database_volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: database_volume }
+      instance_uuid: { get_resource: database }
+      mountpoint: /dev/vdb
 
 outputs:
   instance_ip:
-    description: IP address of the deployed database instance
-    value: { get_attr: [database_server, first_address] }
+    description: IP address of the deployed database microservice
+    value: { get_attr: [database, first_address] }
