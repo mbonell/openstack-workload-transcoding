@@ -35,7 +35,7 @@ parameters:
     description: Private network ID for the server
 
 resources:
-  segurity_group:
+  security_group:
     type: OS::Neutron::SecurityGroup
     properties:
       name: manager
@@ -58,7 +58,7 @@ resources:
       networks:
         - network: { get_param: private_network }
       security_groups:
-        - { get_resource: segurity_group }
+        - { get_resource: security_group }
       user_data:
         get_file: init.sh
 

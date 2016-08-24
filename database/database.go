@@ -3,11 +3,11 @@ package database
 import (
 	"errors"
 	"time"
+	"fmt"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"fmt"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
@@ -608,8 +608,6 @@ func (ds *DataStore) UpdateWorkerStatus(addr string, status string) error {
 	}
 
 	err = ds.AddWorkerEvent(addr, status)
-
-
 
 	return err
 }
