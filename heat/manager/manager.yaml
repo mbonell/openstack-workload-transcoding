@@ -2,7 +2,8 @@ heat_template_version: 2015-10-15
 
 description: >
   Video Transcoding Workload: Manager HOT template. This template launches the manager microservice
-  installing GoLang and the GoLang libraries requiered by the application.
+  installing GoLang, the GoLang libraries requiered by the application and MongoDB. The microservice uses a volumen to
+  store its database data.
 
 parameters:
   key_name:
@@ -33,6 +34,11 @@ parameters:
     type: string
     label: Private network ID
     description: Private network ID for the server
+  volumen_size:
+    type: number
+    label: Size (GB)
+    description: The size of the volume (GB)
+    default: 1
 
 resources:
   security_group:
@@ -61,6 +67,16 @@ resources:
         - { get_resource: security_group }
       user_data:
         get_file: init.sh
+  database_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volumen_size }
+  database_volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: database_volume }
+      instance_uuid: { get_resource: manager }
+      mountpoint: /dev/vdb
 
 outputs:
   instance_ip:

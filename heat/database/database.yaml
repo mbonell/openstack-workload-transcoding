@@ -3,7 +3,7 @@ heat_template_version: 2015-10-15
 description: >
   Video Transcoding Workload: Database HOT template. This template launches the database microservice
   installing GoLang, the GoLang libraries requiered by the application and MongoDB. The microservice uses a volumen to
-  store all the database data.
+  store its database data.
 
 parameters:
   key_name:

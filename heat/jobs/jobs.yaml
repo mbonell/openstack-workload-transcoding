@@ -54,6 +54,14 @@ parameters:
     type: string
     label: OS_DOMAIN_ID
     description: OS_DOMAIN_ID environment variable
+  database_endpoint:
+    type: string
+    label: Database Endpoint
+    description: IP address to connect with the database microservice
+  manager_endpoint:
+    type: string
+    label: Manager Endpoint
+    description: IP address to connect with the manager microservice
 
 resources:
   security_group:
@@ -89,6 +97,8 @@ resources:
             $OS_PROJECT_NAME: { get_param: os_project_name}
             $OS_PASSWORD: { get_param: os_password}
             $OS_DOMAIN_ID: { get_param: os_domain_id}
+            $DATABASE_ENDPOINT: { get_param: database_endpoint}
+            $MANGER_ENDPOINT: { get_param: manager_endpoint}
   source_media_container:
     type: OS::Swift::Container
     properties:

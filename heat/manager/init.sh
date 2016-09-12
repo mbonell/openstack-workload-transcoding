@@ -2,7 +2,18 @@
 REPOSITORY_URL=https://github.com/obazavil/openstack-workload-transcoding.git
 APP_DIR=github.com/obazavil/openstack-workload-transcoding
 
+# Preparing the empty block device
+sudo mke2fs /dev/vdb
+
+# Mount the block device to the MongoDB database files
+mkdir /var/lib/mongodb
+sudo echo "/dev/vdb /var/lib/mongodb ext4 defaults  1 2" >> /etc/fstab
+sudo mount /var/lib/mongodb
+
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
 sudo apt-get update
+sudo apt-get install mongodb-org -y
 sudo apt-get install git -y
 
 # Installing GoLang environment
