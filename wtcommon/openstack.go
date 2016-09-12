@@ -1,16 +1,15 @@
 package wtcommon
 
 import (
-	"io"
-	"os"
-	"path"
 	"fmt"
-	"time"
-	"errors"
-	"net/url"
-	"strings"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"strings"
+	"time"
 
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
@@ -19,12 +18,12 @@ import (
 
 // constants with the name of the containers for jobs
 const (
-	SOURCE_MEDIA_CONTAINER = "media-source"
+	SOURCE_MEDIA_CONTAINER     = "media-source"
 	TRANSCODED_MEDIA_CONTAINER = "media-transcoding"
 )
 
 // getProvider returns the provider
-func GetProvider()  (*gophercloud.ProviderClient, error) {
+func GetProvider() (*gophercloud.ProviderClient, error) {
 	// Get authentication info
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
@@ -53,7 +52,6 @@ func GetServiceObjectStorage(provider *gophercloud.ProviderClient) (*gophercloud
 	return service, nil
 }
 
-
 // downloadFile downloads a file from an URL into a temp file
 func downloadFile(url string) (string, error) {
 	// Create a temp file
@@ -72,11 +70,23 @@ func downloadFile(url string) (string, error) {
 
 	// Copy body into tmpfile
 	_, err = io.Copy(tmpfile, resp.Body)
-	if err != nil  {
+	if err != nil {
 		return tmpfile.Name(), err
 	}
 
 	return tmpfile.Name(), nil
+}
+func IsValidURL(url2check string) bool {
+	// Check correct prefix
+	if strings.HasPrefix(url2check, "http://") || strings.HasPrefix(url2check, "https://") {
+		// Double check is a valid URL
+		_, err := url.Parse(url2check)
+		if err == nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Upload2ObjectStorage uploads the media (url or file) into object storage
@@ -84,15 +94,9 @@ func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, 
 	var fn string
 
 	// If is a URL let's download it
-	if strings.HasPrefix(mediaPath, "http://") || strings.HasPrefix(mediaPath, "https://") {
-		// Double check is a valid URL
-		_, err := url.Parse(mediaPath)
-		if err != nil {
-			return "", errors.New("Invalid URL")
-		}
-
+	if IsValidURL(mediaPath) {
 		// Download file from URL
-		fn, err = downloadFile(mediaPath)
+		fn, err := downloadFile(mediaPath)
 		if fn != "" {
 			defer os.Remove(fn)
 		}
@@ -100,7 +104,7 @@ func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, 
 		if err != nil {
 			return "", err
 		}
-	} else {	// File, let's verify it exists
+	} else { // File, let's verify it exists
 		fn = mediaPath
 
 		// Validate file exists
@@ -119,7 +123,7 @@ func Upload2ObjectStorage(service *gophercloud.ServiceClient, mediaPath string, 
 
 	// Upload to Object Storage
 	ext := path.Ext(filename)
-	name := fmt.Sprintf("%s-%d%s", filename[:len(filename) - len(ext)], time.Now().UnixNano(), ext)
+	name := fmt.Sprintf("%s-%d%s", filename[:len(filename)-len(ext)], time.Now().UnixNano(), ext)
 	res := objects.Create(service, containerName, name, f, nil)
 	_, err = res.ExtractHeader()
 	if err != nil {

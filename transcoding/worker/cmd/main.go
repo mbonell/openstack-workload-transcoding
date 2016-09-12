@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 	"os/exec"
+	"os/signal"
 	"path"
 	"strings"
+	"syscall"
+	"time"
 
-	"golang.org/x/net/context"
-	"github.com/go-resty/resty"
 	"github.com/go-kit/kit/log"
+	"github.com/go-resty/resty"
+	"golang.org/x/net/context"
 
 	"github.com/obazavil/openstack-workload-transcoding/transcoding/worker"
 	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
@@ -25,39 +25,71 @@ const (
 	DELAY = 15 * time.Second
 )
 
+// test: go run transcoding/worker/cmd/main.go -jobs=https://localhost:8081 -manager=https://localhost:8082 -monitor=https://localhost:8084
 func main() {
 	var err error
 
-	errs := make(chan error, 2)
-
 	var (
-		httpAddr = flag.String("http.addr", ":8083", "Address for HTTP (JSON) transcoding worker server")
+		httpAddr = ":" + wtcommon.WORKER_PORT
+		jobs     = flag.String("jobs", "", "Jobs service address (http://server:port)")
+		manager  = flag.String("manager", "", "Manager service address (http://server:port)")
+		monitor  = flag.String("monitor", "", "Monitor service address (http://server:port)")
 	)
 	flag.Parse()
 
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.NewLogfmtLogger(os.Stdout)
 		logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC)
 		logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 	}
+	httpLogger := log.NewContext(logger).With("component", "http")
 
 	var ctx context.Context
 	{
 		ctx = context.Background()
 	}
 
+	if *jobs == "" {
+		logger.Log("error", "Jobs service not specified")
+		os.Exit(1)
+	}
+
+	if !wtcommon.IsValidURL(*jobs) {
+		logger.Log("error", "Invalid address for jobs service")
+		os.Exit(1)
+	}
+
+	if *manager == "" {
+		logger.Log("error", "Manager service not specified")
+		os.Exit(1)
+	}
+
+	if !wtcommon.IsValidURL(*manager) {
+		logger.Log("error", "Invalid address for manager service")
+		os.Exit(1)
+	}
+
+	if *monitor == "" {
+		logger.Log("error", "Monitor service not specified")
+		os.Exit(1)
+	}
+
+	if !wtcommon.IsValidURL(*monitor) {
+		logger.Log("error", "Invalid address for monitor service")
+		os.Exit(1)
+	}
+
 	var tws worker.Service
 	{
-		tws, err = worker.NewService()
+		tws, err = worker.NewService(*jobs, *manager, *monitor)
 		if err != nil {
-			errs <- err
+			logger.Log("error", "Cannot create service: "+err.Error())
+			os.Exit(1)
 		}
 	}
 
 	tws.WorkerUpdateStatus(wttypes.WORKER_STATUS_ONLINE)
-
-	httpLogger := log.NewContext(logger).With("component", "http")
 
 	mux := http.NewServeMux()
 
@@ -65,9 +97,11 @@ func main() {
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 
+	errs := make(chan error, 2)
+
 	go func() {
-		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServeTLS(*httpAddr, "certs/server.pem", "certs/server.key", nil)
+		logger.Log("transport", "http", "address", httpAddr, "msg", "listening")
+		errs <- http.ListenAndServeTLS(httpAddr, "certs/server.pem", "certs/server.key", nil)
 	}()
 	go func() {
 		c := make(chan os.Signal)
@@ -94,7 +128,7 @@ func main() {
 		for {
 			// Ask manager for work
 			resp, err := resty.R().
-				Get(wtcommon.Servers["manager"] + "/tasks?worker=" + tws.GetIP())
+				Get(*manager + "/tasks?worker=" + tws.GetIP())
 
 			// Error in communication? sleep and retry
 			if err != nil {
@@ -131,9 +165,9 @@ func main() {
 				))
 
 			vnTranscoded := fmt.Sprintf("%s-%s.mp4",
-						task.ObjectName,
-						task.Profile,
-				)
+				task.ObjectName,
+				task.Profile,
+			)
 			fnTranscoded := path.Join(os.TempDir(), vnTranscoded)
 
 			// Download media from object storage
@@ -232,5 +266,6 @@ func main() {
 	}()
 
 	logger.Log("terminated", <-errs)
+
 	tws.WorkerUpdateStatus(wttypes.WORKER_STATUS_OFFLINE)
 }

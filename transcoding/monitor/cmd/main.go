@@ -8,39 +8,53 @@ import (
 	"os/signal"
 	"syscall"
 
-	"golang.org/x/net/context"
 	"github.com/go-kit/kit/log"
+	"golang.org/x/net/context"
 
-	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/transcoding/monitor"
+	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 )
 
 func main() {
-	errs := make(chan error, 2)
+	var err error
 
 	var (
-		httpAddr = flag.String("http.addr", ":8084", "Address for HTTP (JSON) transcoding monitor server")
+		httpAddr = ":" + wtcommon.MONITOR_PORT
+		database = flag.String("database", "", "Database service address (http://server:port)")
 	)
 	flag.Parse()
 
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.NewLogfmtLogger(os.Stdout)
 		logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC)
 		logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 	}
+	httpLogger := log.NewContext(logger).With("component", "http")
 
 	var ctx context.Context
 	{
 		ctx = context.Background()
 	}
 
-	var tms monitor.Service
-	{
-		tms = monitor.NewService()
+	if *database == "" {
+		logger.Log("error", "Database service not specified")
+		os.Exit(1)
 	}
 
-	httpLogger := log.NewContext(logger).With("component", "http")
+	if !wtcommon.IsValidURL(*database) {
+		logger.Log("error", "Invalid address for database service")
+		os.Exit(1)
+	}
+
+	var tms monitor.Service
+	{
+		tms, err = monitor.NewService(*database)
+		if err != nil {
+			logger.Log("error", "Cannot create service: "+err.Error())
+			os.Exit(1)
+		}
+	}
 
 	mux := http.NewServeMux()
 
@@ -48,9 +62,10 @@ func main() {
 
 	http.Handle("/", wtcommon.AccessControl(mux))
 
+	errs := make(chan error, 2)
 	go func() {
-		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServeTLS(*httpAddr, "certs/server.pem", "certs/server.key", nil)
+		logger.Log("transport", "http", "address", httpAddr, "msg", "listening")
+		errs <- http.ListenAndServeTLS(httpAddr, "certs/server.pem", "certs/server.key", nil)
 	}()
 	go func() {
 		c := make(chan os.Signal)

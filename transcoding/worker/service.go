@@ -2,15 +2,14 @@ package worker
 
 import (
 	"crypto/tls"
+	"fmt"
+	"github.com/go-resty/resty"
+	"net"
 	"os"
+	"strings"
 	"sync"
 	"syscall"
-	"fmt"
-	"net"
-	"strings"
-	"github.com/go-resty/resty"
 
-	"github.com/obazavil/openstack-workload-transcoding/wtcommon"
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )
 
@@ -40,6 +39,10 @@ type service struct {
 	status  string
 	process *os.Process
 	ip      string
+
+	jobs    string
+	manager string
+	monitor string
 }
 
 func (s *service) GetStatus() (string, error) {
@@ -97,7 +100,7 @@ func (s *service) NotifyWorkerStatus(status string) {
 	resp, err := resty.R().
 		SetBody(st).
 		Put(fmt.Sprintf("%s/workers/status",
-			wtcommon.Servers["monitor"]))
+			s.monitor))
 
 	if err != nil {
 		fmt.Println("[worker] notify worker err:", err)
@@ -124,7 +127,7 @@ func (s *service) NotifyTaskStatus(id string, status string, objectname string) 
 	resp, err := resty.R().
 		SetBody(bodyM).
 		Put(fmt.Sprintf("%s/tasks/%s/status",
-			wtcommon.Servers["manager"],
+			s.manager,
 			id))
 
 	if err != nil {
@@ -153,7 +156,7 @@ func (s *service) NotifyTaskStatus(id string, status string, objectname string) 
 	resp, err = resty.R().
 		SetBody(bodyJ).
 		Put(fmt.Sprintf("%s/transcodings/%s/status",
-			wtcommon.Servers["jobs"],
+			s.jobs,
 			id))
 
 	if err != nil {
@@ -187,7 +190,7 @@ func getOutboundIP() (string, error) {
 }
 
 // NewService creates a transcoding worker service with necessary dependencies.
-func NewService() (Service, error) {
+func NewService(jobs, manager, monitor string) (Service, error) {
 	resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 
 	ip, err := getOutboundIP()
@@ -199,5 +202,9 @@ func NewService() (Service, error) {
 		mtx:    sync.RWMutex{},
 		status: wttypes.WORKER_STATUS_IDLE,
 		ip:     ip,
+
+		jobs:    jobs,
+		manager: manager,
+		monitor: monitor,
 	}, nil
 }

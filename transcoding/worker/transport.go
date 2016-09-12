@@ -1,11 +1,11 @@
 package worker
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 
-	"golang.org/x/net/context"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/context"
 
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -54,7 +54,6 @@ func decodeCancelTaskRequest(_ context.Context, r *http.Request) (interface{}, e
 	return cancelTaskRequest{}, nil
 }
 
-
 type errorer interface {
 	error() error
 }
@@ -85,4 +84,3 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		"error": err.Error(),
 	})
 }
-

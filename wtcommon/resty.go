@@ -3,9 +3,9 @@
 package wtcommon
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
-	"encoding/json"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )

@@ -24,13 +24,14 @@ type Service interface {
 }
 
 type service struct {
+	database string
 }
 
 func (s *service) RegisterWorker(addr string) error {
 	fmt.Println("registering worker:", addr)
 
 	ws := wttypes.WorkerStatus{
-		Addr: addr,
+		Addr:   addr,
 		Status: wttypes.WORKER_STATUS_ONLINE,
 	}
 	err := s.UpdateWorkerStatus(ws)
@@ -42,7 +43,7 @@ func (s *service) DeregisterWorker(addr string) error {
 	fmt.Println("deregistering worker:", addr)
 
 	ws := wttypes.WorkerStatus{
-		Addr: addr,
+		Addr:   addr,
 		Status: wttypes.WORKER_STATUS_OFFLINE,
 	}
 	err := s.UpdateWorkerStatus(ws)
@@ -56,7 +57,7 @@ func (s *service) UpdateWorkerStatus(ws wttypes.WorkerStatus) error {
 	// Update Worker in DB
 	resp, err := resty.R().
 		SetBody(ws).
-		Put(wtcommon.Servers["database"] + "/workers/status")
+		Put(s.database + "/workers/status")
 
 	// Error in communication
 	if err != nil {
@@ -77,8 +78,10 @@ func (s *service) UpdateWorkerStatus(ws wttypes.WorkerStatus) error {
 }
 
 // NewService creates a transcoding monitor service with necessary dependencies.
-func NewService() Service {
+func NewService(database string) (Service, error) {
 	resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 
-	return &service{}
+	return &service{
+		database: database,
+	}, nil
 }

@@ -135,7 +135,7 @@ func (s *service) CancelTranscoding(id string) error {
 	// If addr is not "", let's ask worker to cancel
 	if addr != "" {
 		fmt.Println("asking worker for cancellation:", addr)
-		fmt.Println("url:", addr + ":8083/tasks")
+		fmt.Println("url:", addr+":8083/tasks")
 		resp, err := resty.R().
 			Delete(addr + ":8083/tasks")
 
@@ -151,7 +151,6 @@ func (s *service) CancelTranscoding(id string) error {
 
 	return nil
 }
-
 
 // NewService creates a transcoding manager service with necessary dependencies.
 func NewService() (Service, error) {

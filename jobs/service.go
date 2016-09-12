@@ -31,6 +31,9 @@ type Service interface {
 type service struct {
 	provider             *gophercloud.ProviderClient
 	serviceObjectStorage *gophercloud.ServiceClient
+
+	database string
+	manager  string
 }
 
 func (s *service) AddNewJob(job wttypes.Job) (string, error) {
@@ -51,7 +54,7 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 	// Ask DB to add job into DB (even with error, for logging purposes)
 	resp, err := resty.R().
 		SetBody(job).
-		Post(wtcommon.Servers["database"] + "/jobs")
+		Post(s.database + "/jobs")
 
 	// Error in communication
 	if err != nil {
@@ -84,7 +87,7 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 
 		resp, err := resty.R().
 			SetBody(v).
-			Post(wtcommon.Servers["manager"] + "/tasks")
+			Post(s.manager + "/tasks")
 
 		if err != nil {
 			//TODO: do something when status update fails
@@ -104,7 +107,7 @@ func (s *service) AddNewJob(job wttypes.Job) (string, error) {
 func (s *service) GetJobStatus(jobID string) (string, error) {
 	// Ask DB to get job from DB
 	resp, err := resty.R().
-		Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
+		Get(s.database + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {
@@ -131,7 +134,7 @@ func (s *service) GetJobStatus(jobID string) (string, error) {
 func (s *service) CancelJob(jobID string) error {
 	// Ask DB to get job from DB
 	resp, err := resty.R().
-		Get(wtcommon.Servers["database"] + "/jobs/" + jobID)
+		Get(s.database + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {
@@ -168,10 +171,10 @@ func (s *service) CancelJob(jobID string) error {
 		}
 
 		// Ask manager to cancel transcodings
-		fmt.Println("asking manager to cancel URL:", wtcommon.Servers["manager"]+"/tasks/"+v.ID)
+		fmt.Println("asking manager to cancel URL:", s.manager+"/tasks/"+v.ID)
 		if v.Status == wttypes.TRANSCODING_QUEUED || v.Status == wttypes.TRANSCODING_RUNNING {
 			resp, err := resty.R().
-				Delete(wtcommon.Servers["manager"] + "/tasks/" + v.ID)
+				Delete(s.manager + "/tasks/" + v.ID)
 
 			if err != nil {
 				//TODO: do something when cancel in manager fails
@@ -190,7 +193,7 @@ func (s *service) CancelJob(jobID string) error {
 	// Update DB
 	resp, err = resty.R().
 		SetBody(job).
-		Put(wtcommon.Servers["database"] + "/jobs/" + jobID)
+		Put(s.database + "/jobs/" + jobID)
 
 	// Error in communication
 	if err != nil {
@@ -215,7 +218,7 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 
 	// Ask DB to get transcoding from DB
 	resp, err := resty.R().
-		Get(wtcommon.Servers["database"] + "/transcodings/" + id)
+		Get(s.database + "/transcodings/" + id)
 
 	// Error in communication
 	if err != nil {
@@ -251,7 +254,7 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 	// Update DB
 	resp, err = resty.R().
 		SetBody(t).
-		Put(wtcommon.Servers["database"] + "/transcodings/" + id)
+		Put(s.database + "/transcodings/" + id)
 
 	// Error in communication
 	if err != nil {
@@ -272,7 +275,7 @@ func (s *service) UpdateTranscodingStatus(id string, status string, objectname s
 }
 
 // NewService creates a jobs service with necessary dependencies.
-func NewService() (Service, error) {
+func NewService(database, manager string) (Service, error) {
 	resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 
 	provider, err := wtcommon.GetProvider()
@@ -288,5 +291,8 @@ func NewService() (Service, error) {
 	return &service{
 		provider:             provider,
 		serviceObjectStorage: serviceObjectStorage,
+
+		database: database,
+		manager:  manager,
 	}, nil
 }

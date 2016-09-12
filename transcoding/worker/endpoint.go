@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"golang.org/x/net/context"
 	"github.com/go-kit/kit/endpoint"
+	"golang.org/x/net/context"
 )
 
 // GetStatus
@@ -11,8 +11,8 @@ type getStatusRequest struct {
 }
 
 type getStatusResponse struct {
-	Status string`json:"status,omitempty"`
-	Err error `json:"error,omitempty"`
+	Status string `json:"status,omitempty"`
+	Err    error  `json:"error,omitempty"`
 }
 
 func (r getStatusResponse) error() error { return r.Err }
@@ -41,4 +41,3 @@ func makeCancelTaskEndpoint(tws Service) endpoint.Endpoint {
 		return getStatusResponse{Err: err}, nil
 	}
 }
-

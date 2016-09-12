@@ -1,10 +1,10 @@
 package manager
 
 import (
-	"time"
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )

@@ -4,13 +4,13 @@ import (
 	"net/http"
 )
 
-var Servers = map[string]string{
-	"database": "https://localhost:8080",
-	"jobs":     "https://localhost:8081",
-	"manager":  "https://localhost:8082",
-	"worker":   "https://localhost:8083",
-	"monitor":  "https://localhost:8084",
-}
+const (
+	DATABASE_PORT = "8080"
+	JOBS_PORT     = "8081"
+	MANAGER_PORT  = "8082"
+	WORKER_PORT   = "8083"
+	MONITOR_PORT  = "8084"
+)
 
 // AccessControl returns a handler for the access control
 func AccessControl(h http.Handler) http.Handler {

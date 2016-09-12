@@ -1,8 +1,8 @@
 package database
 
 import (
-	"errors"
 	"crypto/tls"
+	"errors"
 
 	"github.com/go-resty/resty"
 	"gopkg.in/mgo.v2"
@@ -48,7 +48,7 @@ func (s *service) InsertJob(job wttypes.Job) (wttypes.JobIDs, error) {
 	return ids, err
 }
 
-func (s * service) UpdateJob (job wttypes.Job) error {
+func (s *service) UpdateJob(job wttypes.Job) error {
 	datastore := NewDataStore(s.session)
 	defer datastore.Close()
 
@@ -102,7 +102,6 @@ func (s *service) UpdateWorkerStatus(addr string, status string) error {
 
 	return err
 }
-
 
 // NewService creates a database service with necessary dependencies.
 func NewService() (Service, error) {

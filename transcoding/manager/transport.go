@@ -2,17 +2,16 @@ package manager
 
 import (
 	"encoding/json"
-	"net/http"
 	"fmt"
+	"net/http"
 
-	"golang.org/x/net/context"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/context"
 
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
-
 )
 
 // MakeHandler returns a handler for the transcoding manager service.
@@ -145,7 +144,6 @@ func decodeUpdateTaskStatusRequest(_ context.Context, r *http.Request) (interfac
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return nil, err
 	}
-
 
 	return updateTaskStatusRequest{ID: id, Status: body.Status}, nil
 }

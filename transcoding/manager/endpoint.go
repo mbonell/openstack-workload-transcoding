@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"golang.org/x/net/context"
 	"github.com/go-kit/kit/endpoint"
+	"golang.org/x/net/context"
 
 	"github.com/obazavil/openstack-workload-transcoding/wttypes"
 )

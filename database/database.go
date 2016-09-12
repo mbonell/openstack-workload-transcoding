@@ -2,8 +2,8 @@ package database
 
 import (
 	"errors"
-	"time"
 	"fmt"
+	"time"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

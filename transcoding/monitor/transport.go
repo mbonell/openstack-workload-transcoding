@@ -2,11 +2,11 @@ package monitor
 
 import (
 	"encoding/json"
-	"net/http"
 	"fmt"
+	"net/http"
 
-	"golang.org/x/net/context"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/context"
 
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
