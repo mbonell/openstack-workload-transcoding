@@ -54,6 +54,18 @@ parameters:
     type: string
     label: OS_DOMAIN_ID
     description: OS_DOMAIN_ID environment variable
+  jobs_endpoint:
+    type: string
+    label: Jobs Endpoint
+    description: IP address to connect with the jobs microservice
+  manager_endpoint:
+    type: string
+    label: Manager Endpoint
+    description: IP address to connect with the manager microservice
+  monitor_endpoint:
+    type: string
+    label: Monitor Endpoint
+    description: IP address to connect with the monitor microservice
 
 resources:
   security_group:
@@ -89,6 +101,9 @@ resources:
             $OS_PROJECT_NAME: { get_param: os_project_name}
             $OS_PASSWORD: { get_param: os_password}
             $OS_DOMAIN_ID: { get_param: os_domain_id}
+            $JOBS_ENDPOINT: { get_param: jobs_endpoint}
+            $MANGER_ENDPOINT: { get_param: manager_endpoint}
+            $MONITOR_ENDPOINT: { get_param: monitor_endpoint}
 
 outputs:
   instance_ip:

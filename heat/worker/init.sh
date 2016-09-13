@@ -38,4 +38,4 @@ go get github.com/rackspace/gophercloud
 mkdir -p $APP_DIR
 git clone $REPOSITORY_URL $APP_DIR
 cd $APP_DIR
-go run transcoding/worker/cmd/main.go
+go run transcoding/worker/cmd/main.go -jobs=https://$JOBS_ENDPOINT:8081 -manager=https://$MANAGER_ENDPOINT:8082 -monitor=https://$MONITOR_ENDPOINT:8084
