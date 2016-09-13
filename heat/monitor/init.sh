@@ -29,4 +29,4 @@ go get github.com/rackspace/gophercloud
 mkdir -p $APP_DIR
 git clone $REPOSITORY_URL $APP_DIR
 cd $APP_DIR
-go run transcoding/monitor/cmd/main.go
+go run transcoding/monitor/cmd/main.go -database=https://$DATABASE_ENDPOINT:8080

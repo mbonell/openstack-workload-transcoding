@@ -33,6 +33,10 @@ parameters:
     type: string
     label: Private network ID
     description: Private network ID for the server
+  database_endpoint:
+    type: string
+    label: Database Endpoint
+    description: IP address to connect with the database microservice
 
 resources:
   security_group:
@@ -60,8 +64,10 @@ resources:
       security_groups:
         - { get_resource: security_group }
       user_data:
-        get_file: init.sh
-
+        str_replace:
+          template: { get_file: init.sh }
+            params:
+              $DATABASE_ENDPOINT: { get_param: database_endpoint}
 outputs:
   instance_ip:
     description: IP address of the deployed monitor microservice
