@@ -36,4 +36,4 @@ go get github.com/rackspace/gophercloud
 mkdir -p $APP_DIR
 git clone $REPOSITORY_URL $APP_DIR
 cd $APP_DIR
-go run jobs/cmd/main.go -database=https://$DATABASE_ENDPOINT:8080 -manager=https://$DATABASE_ENDPOINT:8082
+go run jobs/cmd/main.go -database=https://$DATABASE_ENDPOINT:8080 -manager=https://$MANAGER_ENDPOINT:8082
